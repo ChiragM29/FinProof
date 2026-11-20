@@ -139,7 +139,7 @@ def test_answer_rules(env):
     assert answer(participant_id="p-nobody") == 404
     assert answer(tip_id="T9") == 400
     assert answer(answer="maybe") == 400
-    assert answer(confidence=5) == 400
+    assert answer(confidence=6) == 400 and answer(confidence=0) == 400
     assert answer() == 200
     assert answer() == 409
 
@@ -157,7 +157,7 @@ def test_a_clear_effect_is_reported(env):
     assert good["diff"] == 0.0
     assert r["criteria"]["h1"]["met"] is True and r["criteria"]["h2"]["met"] is True
     assert r["metrics"]["correct"]["card"] == 1.0
-    assert "Only 8 people" in " ".join(r["warnings"])
+    assert "Small sample: 8 people" in " ".join(r["warnings"])
 
 
 def test_no_effect_is_not_called_a_success(env):
@@ -205,3 +205,11 @@ def test_permutation_and_bootstrap_basics():
     assert study.sign_flip_p([0.5]) is None
     assert study.sign_flip_p([0.0, 0.0, 0.0]) == 1.0
     assert study.bootstrap_ci([-1.0, -1.0, -1.0]) == [-1.0, -1.0]
+
+
+def test_calibration_metric_and_preregistration_are_reported(tmp_path, monkeypatch):
+    """Brier score of confidence (1-5) vs outcome, and the metrics' fixed-in-advance dates, on the results page."""
+    from finproof import study as st
+    assert st.CONFIDENCE == (1, 2, 3, 4, 5) and st.SMALL_SAMPLE == 30
+    assert len(st.PREREGISTERED) == 3 and all(x["fixed"] for x in st.PREREGISTERED)
+    assert "Calibration" in st.PREREGISTERED[2]["metric"]

@@ -41,6 +41,17 @@ LABEL_HORIZON = config.MAIN_HORIZON
 CLEAR_MARGIN = 0.02      # outcomes this close to the Nifty are flagged as unclear
 NON_INFERIORITY = 0.10   # H2: saying yes to good tips may not drop by more than 10 points
 MIN_PEOPLE = 20
+SMALL_SAMPLE = 30   # below this many finished people, the results page adds a "small sample" note
+CONFIDENCE = (1, 2, 3, 4, 5)
+# Fixed before any participant data, and printed on the results page.
+PREREGISTERED = [
+    {"metric": "Share of bad tips people would act on, with and without the label (lower is better)",
+     "fixed": "20 Nov 2026, when the study was designed"},
+    {"metric": "Share of good tips still trusted, with and without the label (should not drop by more than 10 points)",
+     "fixed": "20 Nov 2026, when the study was designed"},
+    {"metric": "Calibration: how well confidence (1-5) matches the outcomes, as a Brier score (lower is better)",
+     "fixed": "21 Nov 2026, 04:15 IST, before any participant data"},
+]
 BACKGROUND_CHOICES = {
     "invests": {"regularly", "sometimes", "not_yet"},
     "sees_tips": {"daily", "weekly", "rarely", "never"},
@@ -292,7 +303,7 @@ def _start_event(events: list[dict], pid: str) -> dict:
 def record_answer(test_set: TestSet, pid: str, tip_id: str, answer: str, confidence: int, ms: int) -> None:
     if answer not in ("yes", "no"):
         raise StudyError(400, "The answer must be yes or no.")
-    if confidence not in (1, 2, 3):
+    if confidence not in CONFIDENCE:
         raise StudyError(400, "Confidence must be 1, 2 or 3.")
     log = StudyLog.for_set(test_set)
     with log.lock:
@@ -352,6 +363,15 @@ def participant_rows(test_set: TestSet, events: list[dict]) -> list[dict]:
             g, b_ = row[f"good_yes_{cond}"], row[f"bad_yes_{cond}"]
             row[f"gap_{cond}"] = None if g is None or b_ is None else g - b_
             row[f"ms_{cond}"] = [a["ms"] for a in ans]
+            # Brier score: a yes with confidence c means "good" with probability 0.5 + 0.5 * (c - 1) / 4.
+            sq = []
+            for a in ans:
+                if not labels.get(a["tip_id"]):
+                    continue
+                lean = 0.5 * (min(max(int(a.get("confidence", 1)), 1), 5) - 1) / 4
+                p_good = 0.5 + lean if a["answer"] == "yes" else 0.5 - lean
+                sq.append((p_good - (1.0 if labels[a["tip_id"]] == "good" else 0.0)) ** 2)
+            row[f"brier_{cond}"] = round(sum(sq) / len(sq), 4) if sq else None
         rows.append(row)
     return rows
 
@@ -430,7 +450,7 @@ def results(test_set: TestSet) -> dict:
     events = StudyLog.for_set(test_set).events()
     rows = participant_rows(test_set, events)
     done = [r for r in rows if r["complete"]]
-    metrics = {m: _paired(done, m) for m in ("bad_yes", "good_yes", "correct", "gap")}
+    metrics = {m: _paired(done, m) for m in ("bad_yes", "good_yes", "correct", "gap", "brier")}
     bad, good = metrics["bad_yes"], metrics["good_yes"]
 
     h1 = None if bad["ci"] is None else bool(bad["ci"][1] < 0)
@@ -467,9 +487,9 @@ def results(test_set: TestSet) -> dict:
     warnings = list(test_set.problems)
     if test_set.practice:
         warnings.append("Practice set with made-up tips: these answers are not evidence.")
-    if 0 < len(done) < MIN_PEOPLE:
+    if 0 < len(done) < SMALL_SAMPLE:
         who = "person" if len(done) == 1 else "people"
-        warnings.append(f"Only {len(done)} {who} so far; we planned at least {MIN_PEOPLE}. Treat this as a pilot.")
+        warnings.append(f"Small sample: {len(done)} {who} so far (below {SMALL_SAMPLE}). Treat this as a pilot.")
     if any(r["set_digest"] != test_set.digest for r in rows):
         warnings.append("Some sessions were run with a different version of the tip set.")
 
@@ -489,7 +509,7 @@ def results(test_set: TestSet) -> dict:
                                       f"-{NON_INFERIORITY * 100:.0f})."},
         },
         "seconds_per_tip": {c: median_seconds(c) for c in CONDITIONS},
-        "per_tip": per_tip, "warnings": warnings, "notes": test_set.notes,
+        "per_tip": per_tip, "warnings": warnings, "notes": test_set.notes, "preregistered": PREREGISTERED,
     }
 
 

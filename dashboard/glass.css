@@ -44,3 +44,39 @@ code.url { background: rgba(2, 6, 12, 0.6); border-color: var(--border); }
 .chip { background: rgba(2, 6, 12, 0.55); border-color: var(--border); color: var(--text); }
 .kv { grid-template-columns: max-content minmax(0, 1fr); }
 .kv dd { overflow-wrap: anywhere; min-width: 0; }
+
+/* ---- T.R.U.C.E. look for the study and results pages (visual only; same values as truce.css) ---- */
+@font-face { font-family: "Inter Variable"; font-weight: 100 900; font-display: swap; src: url("fonts/inter-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk Variable"; font-weight: 300 700; font-display: swap; src: url("fonts/space-grotesk-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono Variable"; font-weight: 100 800; font-display: swap; src: url("fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2"); }
+body {
+  --bg: #0b0f17; --border: rgba(30, 41, 59, 0.8); --muted: #94a3b8; --accent: #38bdf8; --warn: #f43f5e; --good: #10b981;
+  background-color: #0b0f17;
+  background-image: radial-gradient(120% 70% at 50% -10%, rgba(15, 23, 42, 0.9) 0%, #0b0f17 55%, #06080d 100%);
+  background-attachment: fixed;
+  font-family: "Inter Variable", "Nirmala UI", "Noto Sans Kannada", "Noto Sans Devanagari", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px); background-size: 26px 26px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%); mask-image: linear-gradient(to bottom, #000 0%, transparent 70%); }
+h1, h2, h3 { font-family: "Space Grotesk Variable", "Inter Variable", system-ui, sans-serif; }
+.logo { font-family: "Space Grotesk Variable", system-ui, sans-serif; font-weight: 900; letter-spacing: 0.05em; color: transparent; text-shadow: none;
+  background-image: linear-gradient(90deg, #22d3ee, #7dd3fc, #818cf8, #7dd3fc, #22d3ee); background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.4)); animation: ts-logo 9s linear infinite; }
+@keyframes ts-logo { to { background-position: 300% 0; } }
+.card, .input-card, .post { border-radius: 16px; border: 1px solid rgba(30, 41, 59, 0.8); background: rgba(15, 23, 42, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+.post { border-left: 3px solid #38bdf8; }
+button.primary { border-radius: 12px; border: 1px solid rgba(125, 211, 252, 0.3); background: linear-gradient(180deg, #38bdf8, #0284c7);
+  color: #020617; font-weight: 600; box-shadow: 0 0 20px rgba(56, 189, 248, 0.25); }
+.choice, .chip { border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.7); background: rgba(30, 41, 59, 0.4); color: #e2e8f0; font-weight: 600; }
+.choice.selected { border-color: rgba(56, 189, 248, 0.5); background: rgba(14, 165, 233, 0.2); box-shadow: 0 0 16px rgba(56, 189, 248, 0.25); color: #f8fafc; }
+.progress .fill { background: linear-gradient(90deg, #38bdf8, #0284c7); }
+th { font-family: "Space Grotesk Variable", system-ui, sans-serif; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; }
+td.num, .num, code.url, .kv dd code { font-family: "JetBrains Mono Variable", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+.pill.REAL { color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); }
+.pill.SYNTHETIC { color: #fcd34d; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
+.neg { color: #f43f5e; }
+.small { font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .logo { animation: none; } }

@@ -18,7 +18,8 @@ POST = dt.date(2025, 6, 2)
 START = "2024-06-03"
 N = 400
 # Constants the templates themselves use: "1 October 2025", "3 sessions", "20-day", "24 hours", "30 days", "Nifty 50".
-TEMPLATE_NUMBERS = {"1", "3", "20", "24", "30", "50", "2025"}
+# Plus indicator parameters in labels such as "RSI (14)", "Bollinger (20, 2)" and "MACD (12, 26, 9)".
+TEMPLATE_NUMBERS = {"1", "2", "3", "9", "12", "14", "20", "24", "26", "30", "50", "2025"}
 NUM = re.compile(r"\d+(?:[.,]\d+)*")
 
 
@@ -196,7 +197,10 @@ def test_chart_context_is_point_in_time_and_neutral(hype):
     ctx = brief["context"]
     tech = card["claims"][0]["technicals"]
     assert ctx and ctx["as_of"] == tech["as_of"] < POST.isoformat()
-    assert {f["code"] for f in ctx["facts"]} >= {"rsi14", "atr14", "sma20", "vwap20"}
+    codes = [f["code"] for f in ctx["facts"]]
+    assert codes[:2] == ["volume", "after"] and {"atr14", "vwap20"} <= set(codes)
+    assert "rsi14" not in codes and "macd" not in codes  # momentum readings live in Raw Forensic Signals only
+    assert {"tech_rsi14", "tech_macd"} <= {r["code"] for r in brief["raw"]}
     assert any("Typical daily swing (ATR 14): ±" in f["text"] for f in ctx["facts"])
 
 
@@ -324,8 +328,8 @@ def test_profile_briefs_use_only_numbers_from_the_scan(hype, upi, calm):
 
 def test_number_check_catches_an_invented_number(hype):
     card, brief = hype
-    fake = {**brief, "right": brief["right"] + [{"code": "x", "title": "t", "text": "Up 37.5% in 9 days."}]}
-    assert number_problems(fake, card) == ["37.5", "9"]
+    fake = {**brief, "right": brief["right"] + [{"code": "x", "title": "t", "text": "Up 37.5% in 113 days."}]}
+    assert number_problems(fake, card) == ["113", "37.5"]
 
 
 def test_no_demo_brief_invents_a_number(demo_cards):

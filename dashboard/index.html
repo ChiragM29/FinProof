@@ -6,6 +6,7 @@
   <title>FinProof</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="cc.css">
+  <link rel="stylesheet" href="truce.css">
 </head>
 <body class="cc">
   <header class="cc-head">
@@ -15,6 +16,7 @@
     </a>
     <span class="sp" id="st-mode" title="Online first, local cache as fallback">HYBRID</span>
     <nav class="tabs" aria-label="Views">
+      <button class="tab" data-view="problem" id="nav-problem">Problem Map</button>
       <button class="tab active" data-view="workspace">Workspace</button>
       <button class="tab" data-view="sources">Sources</button>
       <button class="tab" data-view="study" id="nav-study">Decision Study</button>
@@ -32,7 +34,7 @@
         <form id="scan-form" class="scan-form" autocomplete="off">
           <label class="scan-field">
             <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="#38bdf8" stroke-width="2"/><path d="m20 20-4-4" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/></svg>
-            <textarea id="scan-input" rows="1" aria-label="Post to scan" placeholder="Paste a YouTube, Instagram, X link, or stock tip…"></textarea>
+            <textarea id="scan-input" rows="1" spellcheck="false" aria-label="Post to scan" placeholder="Paste a YouTube, Instagram, X link, or stock tip…"></textarea>
           </label>
           <div class="samples-wrap">
             <button class="samples-btn" id="samples-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="samples-pop">Samples ▾</button>
@@ -60,7 +62,7 @@
                 <button type="button" data-range="90">90D</button>
                 <button type="button" data-range="365">1Y</button>
               </div>
-              <label class="toggle"><input type="checkbox" id="nifty-toggle"> Nifty 50</label>
+              <label class="toggle"><input type="checkbox" id="nifty-toggle" checked> Nifty 50</label>
               <div class="ind-bar" id="ind-bar" role="group" aria-label="Indicators"></div>
               <div class="ind-help" id="ind-help" hidden></div>
             </div>
@@ -90,7 +92,8 @@
           <div class="glass xray" id="tour-xray"></div>
         </div>
 
-        <aside class="right glass" id="tour-auditor" aria-label="Veteran's Desk, Claim Auditor and journal">
+        <aside class="right glass" id="tour-auditor" aria-label="Signal or Noise label, Veteran's Desk, Claim Auditor and journal">
+          <div class="signal-label" id="signal-label" hidden></div>
           <div class="rtabs">
             <button class="rtab active" data-rtab="desk">Veteran's Desk</button>
             <button class="rtab" data-rtab="auditor">Claim Auditor</button>
@@ -111,6 +114,7 @@
       </div>
     </section>
 
+    <section id="view-problem" hidden></section>
     <section id="view-sources" hidden></section>
     <section id="view-study" hidden></section>
     <section id="view-failures" hidden></section>

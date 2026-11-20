@@ -59,7 +59,7 @@ const state = {
   prompts: [], history: [], busy: false, user: null, journalSummary: null, sources: null, selectedChip: 0, deskView: "mentor",
   index: new Map(), url: null, health: null,
   // Clean default chart: candles, tip pin, volume and its 20D average. Everything else is one click away.
-  ind: { sma20: false, ema50: false, vwap20: false, bollinger: false, levels: false, vol_avg20: true, rsi14: false, macd: false },
+  ind: { sma20: false, ema50: false, vwap20: false, bollinger: false, levels: false, vol_avg20: false, rsi14: false, macd: false, atr14: false },
 };
 
 // ------------------------------------------------------------------ helpers
@@ -141,6 +141,7 @@ async function runScan(text, { sample = null, posted_on = null, source = null, u
     $$(".sample-item").forEach((d) => d.classList.toggle("active", d.dataset.id === sample));
     renderMeta();
     renderKpis();
+    renderLabel();
     renderXray();
     if (state.claim) await setChart(state.claim.symbol, { card, claim: state.claim });
     auditorNote();  // async: fills the auditor tab in the background
@@ -264,7 +265,9 @@ const INDICATORS = [
   { key: "vol_avg20", label: "20D Vol Avg", color: "#e2e8f0" },
   { key: "rsi14", label: "RSI (14)", color: "#e879f9" },
   { key: "macd", label: "MACD (12, 26, 9)", color: "#38bdf8" },
+  { key: "atr14", label: "ATR (14)", color: "#f59e0b" },
 ];
+const CHART_FONT = "'JetBrains Mono Variable', ui-monospace, Consolas, monospace";
 const VOL_CAP = 5;         // volume bars above 5x the 20D average are drawn capped (true value in the readout)
 const PANE_EXTRA = 120;    // px added to the chart for each lower pane, so the candles never get squeezed
 const LINE = { lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
@@ -276,14 +279,14 @@ function ensureChart() {
   if (state.chart || !LWC) return !!state.chart;
   const chart = LWC.createChart($("#chart"), {
     autoSize: true,
-    layout: { background: { type: "solid", color: "rgba(0,0,0,0)" }, textColor: "#8b98ab", fontSize: 11, attributionLogo: true,
+    layout: { background: { type: "solid", color: "rgba(0,0,0,0)" }, textColor: "#94a3b8", fontSize: 11, attributionLogo: true, fontFamily: CHART_FONT,
       panes: { separatorColor: "#1e293b", separatorHoverColor: "rgba(56,189,248,0.25)" } },
-    grid: { vertLines: { color: "rgba(148,163,184,0.06)" }, horzLines: { color: "rgba(148,163,184,0.06)" } },
+    grid: { vertLines: { color: "rgba(148,163,184,0.08)" }, horzLines: { color: "rgba(148,163,184,0.08)" } },
     rightPriceScale: { borderColor: "#1e293b" },
     timeScale: { borderColor: "#1e293b", rightOffset: 4 },
     crosshair: { mode: LWC.CrosshairMode.Normal },
   });
-  const candles = chart.addSeries(LWC.CandlestickSeries, { upColor: "#10b981", downColor: "#ef4444", borderVisible: false, wickUpColor: "#10b981", wickDownColor: "#ef4444" });
+  const candles = chart.addSeries(LWC.CandlestickSeries, { upColor: "#10b981", downColor: "#f43f5e", borderVisible: false, wickUpColor: "#10b981", wickDownColor: "#f43f5e" });
   const nifty = chart.addSeries(LWC.LineSeries, { ...LINE, color: "#f8fafc", lineStyle: LWC.LineStyle.Dotted });
   const dashed = { ...LINE, lineStyle: LWC.LineStyle.Dashed };
   const overlays = {
@@ -408,20 +411,26 @@ function toggleIndicator(key) {
 function renderIndBar() {
   const bar = $("#ind-bar");
   const explain = state.data?.explain || {};
-  bar.replaceChildren(h("span", { class: "ind-label" }, "Indicators"),
+  const on = INDICATORS.filter((x) => state.ind[x.key]).length;
+  const open = !!state.indOpen;
+  bar.replaceChildren(h("button", { type: "button", class: `ind-toggle ${on ? "on" : ""}`, "aria-expanded": String(open), "aria-controls": "ind-pop",
+      onclick: (e) => { e.stopPropagation(); state.indOpen = !open; renderIndBar(); } }, `Indicators (${INDICATORS.length})${on ? ` · ${on} on` : ""} ▾`),
+    h("div", { class: "ind-pop", id: "ind-pop", hidden: open ? null : "", onclick: (e) => e.stopPropagation() },
+    h("span", { class: "ind-label" }, "Indicators"),
     ...INDICATORS.map((x) => h("button", { type: "button", class: `ichip ${state.ind[x.key] ? "on" : ""}`, "aria-pressed": String(!!state.ind[x.key]),
       title: explain[x.key] || x.label, onclick: () => toggleIndicator(x.key) }, h("i", { style: `background:${x.color}` }), x.label)),
     h("button", { type: "button", class: "ichip help", "aria-expanded": String(!$("#ind-help").hidden), title: "What do these measure?",
-      onclick: () => { $("#ind-help").hidden = !$("#ind-help").hidden; renderIndHelp(); renderIndBar(); } }, "?"));
+      onclick: () => { $("#ind-help").hidden = !$("#ind-help").hidden; renderIndHelp(); renderIndBar(); } }, "?")));
   renderIndHelp();
 }
+document.addEventListener("click", () => { if (state.indOpen) { state.indOpen = false; renderIndBar(); } });
 
 function renderIndHelp() {
   const box = $("#ind-help");
   if (box.hidden) return;
   const explain = state.data?.explain || {};
   const active = INDICATORS.filter((x) => state.ind[x.key]);
-  const list = [...(active.length ? active : INDICATORS), { key: "atr14", label: "ATR (14)" }];
+  const list = active.length ? active : INDICATORS;
   box.replaceChildren(h("b", {}, active.length ? "What the active indicators measure" : "What each indicator measures"),
     h("ul", {}, list.map((x) => h("li", {}, explain[x.key] || x.label))),
     h("p", { class: "small muted" }, "They describe past prices and volumes, to check a post's story. They are not signals to act on."));
@@ -444,8 +453,8 @@ function showOhlc(time) {
   const ind = d.indicators || {}, on = state.ind, v = (k) => ind[k]?.[i];
   const vol = d.volume[i];
   const atr = v("atr14_pct");
-  const parts = [h("span", { class: "atr-pill", title: d.explain?.atr14 || "ATR (14)" },
-    atr != null ? `Avg Daily Swing: ±${(atr * 100).toFixed(1)}%` : "Avg Daily Swing: —"),
+  const parts = [on.atr14 ? h("span", { class: "atr-pill", title: d.explain?.atr14 || "ATR (14)" },
+    atr != null ? `Avg Daily Swing: ±${(atr * 100).toFixed(1)}%` : "Avg Daily Swing: —") : "",
     h("span", {}, h("b", {}, "Vol "), fmtVol(vol.value),
     vol.ratio !== null && vol.ratio !== undefined ? h("em", { class: vol.ratio >= d.spike_ratio ? "hot" : "" }, ` ${vol.ratio.toFixed(1)}× 20D avg`) : "")];
   const add = (key, label, text) => { if (on[key] && text !== null) parts.push(h("span", {}, h("i", { style: `background:${INDICATORS.find((x) => x.key === key).color}` }), h("b", {}, `${label} `), text)); };
@@ -580,6 +589,58 @@ function renderDesk() {
   parts.push(h("p", { class: "desk-disc" }, v.disclaimer), h("div", { class: "desk-ask prompts" }, ...promptButtons()));
   box.replaceChildren(...parts);
   box.scrollTop = 0;
+}
+
+// ------------------------------------------------------------------ Signal or Noise label (the verdict, first)
+function renderLabel() {
+  const L = state.card?.label;
+  const box = $("#signal-label");
+  if (!L) { box.hidden = true; return; }
+  const whyBtn = (text) => {
+    const note = h("p", { class: "nl-why", hidden: "" }, text);
+    const btn = h("button", { type: "button", class: "nl-why-btn", "aria-expanded": "false",
+      onclick: () => { note.hidden = !note.hidden; btn.setAttribute("aria-expanded", String(!note.hidden)); } }, "why");
+    return [btn, note];
+  };
+  const row = (l) => {
+    const [btn, note] = l.why ? whyBtn(l.why) : ["", ""];
+    return h("div", { class: `nl-row tone-${l.tone}` },
+      h("span", { class: "nl-k" }, l.label),
+      h("span", { class: "nl-v" }, l.value, l.evidence?.length ? h("span", { class: "nl-ev" }, l.evidence.map((e) => `“${e}”`).join(", ")) : ""),
+      h("span", { class: "nl-tags" }, pill(l.provenance), btn), note);
+  };
+  const t = L.message_type;
+  const [tBtn, tNote] = whyBtn(t.why);
+  box.replaceChildren(
+    h("div", { class: "nl-head" }, h("h2", {}, L.title), h("span", { class: `nl-type tone-${t.tone}` }, t.value), pill(t.provenance), tBtn),
+    tNote,
+    h("p", { class: "nl-note" }, L.note),
+    h("div", { class: "nl-sec" }, L.right_before.title), ...L.right_before.lines.map(row),
+    h("div", { class: "nl-sec" }, L.fair.title), ...L.fair.lines.map(row));
+  box.hidden = false;
+}
+
+// ------------------------------------------------------------------ Problem Map: each line of the brief -> what answers it
+const BRIEF = [
+  ["“A few finfluencers are registered with SEBI. Most are not.”", "SEBI registration check against a dated copy of SEBI's research analyst and investment adviser lists", "Signal or Noise label › SEBI registration · Key signals › SEBI status", "workspace"],
+  ["“Some tips are honest but wrong.”", "A track-record axis (“Were they right before?”), kept separate from the fairness axis", "Label › Were they right before? · Sources › Signal Map", "sources"],
+  ["“Others are part of pump-and-dump schemes.”", "Pump-pattern check (volume before the post, price after it) and a real SEBI case on BSE", "Label › Pump pattern · Samples › Real case", "workspace"],
+  ["“Nobody tracks most tips over time, so an investor cannot see which sources were right in the past.”", "The tip ledger: every call scored against the Nifty 50 at 7, 30 and 90 days", "Sources tab · Noise Journal", "sources"],
+  ["“Retail investors act on information whose quality they cannot judge”", "The Signal or Noise label and the Veteran's Desk explanations", "Right panel: label, then Veteran's Desk", "workspace"],
+  ["“get much of their information from social media”", "WhatsApp, Telegram, YouTube, X and Instagram input; the Chrome extension; a reply card in 3 languages", "Scanner · Samples · Label › Reply card", "workspace"],
+  ["“measurably improves how a retail investor makes decisions”", "The Decision Study: each person sees half the tips with the label and half without; metrics fixed in advance", "Decision Study tab · /results.html", "study"],
+  ["“without ever telling them what to buy or sell”", "An automated no-advice test over every string; the Claim Auditor's refusal card; past prices only", "Claim Auditor › the red refusal card · Failure Cases", "failures"],
+];
+
+function loadProblem() {
+  $("#view-problem").replaceChildren(h("div", { class: "glass panel rise problem-map", id: "problem-map" },
+    h("h2", {}, "Problem Map"),
+    h("p", { class: "pm-brief" }, "The challenge: “Build a tool that measurably improves how a retail investor makes decisions, without ever telling them what to buy or sell.”"),
+    h("p", { class: "pm-pitch" }, "We never rate stocks. We rate the message, and we keep score on the messenger."),
+    h("div", { class: "table-wrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, h("th", {}, "The brief says"), h("th", {}, "FinProof's answer"), h("th", {}, "Evidence on screen"), h("th", {}, ""))),
+      h("tbody", {}, BRIEF.map(([quote, answer, where, view]) => h("tr", {}, h("td", { class: "pm-quote" }, quote), h("td", {}, answer), h("td", {}, where),
+        h("td", {}, h("button", { type: "button", class: "btn ghost", onclick: () => showView(view) }, "Show")))))))));
 }
 
 // ------------------------------------------------------------------ Claim Auditor
@@ -748,7 +809,8 @@ const FAILURES = [
 
 function showView(name) {
   $$(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
-  ["workspace", "sources", "study", "failures"].forEach((v) => { $(`#view-${v}`).hidden = v !== name; });
+  ["problem", "workspace", "sources", "study", "failures"].forEach((v) => { $(`#view-${v}`).hidden = v !== name; });
+  if (name === "problem") loadProblem();
   if (name === "sources") loadSources();
   if (name === "study") loadStudy();
   if (name === "failures") loadFailures();
@@ -833,6 +895,7 @@ function loadFailures() {
 
 // ------------------------------------------------------------------ Judge Tour
 const TOUR = [
+  { target: "#view-problem", view: "problem", title: "Problem Map", text: "Every line of the brief, the feature that answers it, and where to see it. We never rate stocks: we rate the message and keep score on the messenger." },
   { target: "#tour-scanner", title: "Zero-input scanner", text: "Paste a YouTube, Instagram or X link, or a forward. FinProof finds the date, source and stock itself. Try Samples ▾." },
   { target: "#tour-chart", title: "Candles + volume spike", text: "Real NSE prices. The blue pin marks the post; red is a volume spike before it. Indicators are one click away." },
   { target: "#tour-xray", title: "Credibility X-Ray", text: "Every flag quotes the post. Media & impersonation cues, then the source's past record." },
@@ -848,7 +911,7 @@ function tourShow(i) {
   if (i < 0 || i >= TOUR.length) return tourEnd();
   tourAt = i;
   const step = TOUR[i];
-  if (i < 5) showView("workspace");
+  showView(step.view || "workspace");
   step.before?.();
   const el = $(step.target);
   el.scrollIntoView({ block: "center", behavior: REDUCED ? "auto" : "smooth" });
@@ -948,10 +1011,10 @@ async function refreshStatus() {
   try {
     state.health = await getJSON("/api/health");
     const live = !!state.health.network?.live;
-    $("#st-mode").textContent = state.health.network?.label || "HYBRID";
+    $("#st-mode").textContent = `// ${state.health.network?.label || "HYBRID"}`;
     $("#st-mode").className = `sp ${live ? "ok" : "amber"}`;
   } catch {
-    $("#st-mode").textContent = "SERVER OFFLINE";
+    $("#st-mode").textContent = "// SERVER OFFLINE";
     $("#st-mode").className = "sp amber";
   }
   if (state.card) auditorStatus();
@@ -969,3 +1032,46 @@ setInterval(refreshStatus, 30000);
   setScanText(first.text);
   await runScan(first.text, { sample: first.id });
 })();
+
+// ------------------------------------------------------------------ T.R.U.C.E. look (visual only)
+// Segmented controls get a thumb that slides to the selected option; panels get a glow that follows
+// the pointer; buttons get a ripple from where they were pressed. Delete this block to undo.
+const THUMB_GROUPS = [".tabs", ".rtabs", "#rp-desk .seg", '.seg[aria-label="Chart window"]'];
+let thumbFrame = 0;
+function syncThumbs() {
+  thumbFrame = 0;
+  THUMB_GROUPS.forEach((sel) => $$(sel).forEach((g) => {
+    const b = [...g.children].find((x) => x.tagName === "BUTTON" && x.classList.contains("active"));
+    if (!b || !b.offsetWidth) { g.classList.remove("has-thumb"); return; }
+    g.style.setProperty("--th-x", `${b.offsetLeft}px`);
+    g.style.setProperty("--th-y", `${b.offsetTop}px`);
+    g.style.setProperty("--th-w", `${b.offsetWidth}px`);
+    g.style.setProperty("--th-h", `${b.offsetHeight}px`);
+    g.classList.add("has-thumb");
+  }));
+}
+const queueThumbs = () => { if (!thumbFrame) thumbFrame = requestAnimationFrame(syncThumbs); };
+new MutationObserver(queueThumbs).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden"] });
+addEventListener("resize", queueThumbs);
+document.fonts?.ready.then(() => { queueThumbs(); state.chart?.applyOptions({ layout: { fontFamily: CHART_FONT } }); });
+let glowFrame = 0;
+document.addEventListener("pointermove", (e) => {
+  if (glowFrame) return;
+  const { clientX, clientY, target } = e;
+  glowFrame = requestAnimationFrame(() => {
+    glowFrame = 0;
+    const panel = target instanceof Element ? target.closest(".glass") : null;
+    if (!panel) return;
+    const box = panel.getBoundingClientRect();
+    panel.style.setProperty("--mx", `${clientX - box.left}px`);
+    panel.style.setProperty("--my", `${clientY - box.top}px`);
+  });
+}, { passive: true });
+document.addEventListener("pointerdown", (e) => {
+  const btn = e.target instanceof Element ? e.target.closest(".scan-btn, .btn-tour, .btn, .pill-btn, .samples-btn, .ask button") : null;
+  if (!btn || REDUCED) return;
+  const box = btn.getBoundingClientRect();
+  const dot = h("span", { class: "ts-ripple-dot", "aria-hidden": "true", style: `left:${e.clientX - box.left}px;top:${e.clientY - box.top}px` });
+  btn.append(dot);
+  setTimeout(() => dot.remove(), 600);
+}, { passive: true });

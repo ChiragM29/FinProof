@@ -118,8 +118,9 @@ function showTip(step) {
   let ms = 0;
 
   const status = h("p", { class: "small muted status" });
-  const sureRow = choiceRow([[1, "Not sure"], [2, "Fairly sure"], [3, "Very sure"]], (v) => submit(v));
-  const sure = h("div", { class: "q", hidden: "" }, h("p", { class: "q-label" }, "How sure are you?"), sureRow);
+  const sureRow = choiceRow([[1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]], (v) => submit(v));
+  const sure = h("div", { class: "q", hidden: "" }, h("p", { class: "q-label" }, "How sure are you?"),
+    h("p", { class: "small muted" }, "1 = not sure at all, 5 = completely sure"), sureRow);
   const decideRow = choiceRow([["yes", "Yes, I would act on it"], ["no", "No"]], (v) => {
     answer = v;
     ms = Math.round(performance.now() - shownAt);
@@ -160,7 +161,7 @@ function showTip(step) {
   onKey = (k) => {
     if (k === "y") decideRow.press.yes();
     else if (k === "n") decideRow.press.no();
-    else if (answer && ["1", "2", "3"].includes(k)) sureRow.press[Number(k)]();
+    else if (answer && ["1", "2", "3", "4", "5"].includes(k)) sureRow.press[Number(k)]();
   };
 }
 

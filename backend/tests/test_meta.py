@@ -179,7 +179,7 @@ def test_scan_steps_and_tour_targets_exist():
         assert step in html
     js = (DASHBOARD / "cc.js").read_text(encoding="utf-8")
     targets = re.findall(r'target: "#([\w-]+)"', js)
-    assert len(targets) == 6 and all(f'id="{t}"' in html for t in targets)
+    assert len(targets) == 7 and all(f'id="{t}"' in html for t in targets)
 
 
 def test_pages_load_nothing_from_the_internet():

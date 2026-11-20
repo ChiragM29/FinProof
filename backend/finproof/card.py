@@ -165,6 +165,10 @@ def _track_record(ledger: Ledger, source_key: str | None, as_of: dt.date | None 
         data["status"] = "not_enough"
         data["text"] = (f"Only {rec.scored} scored tips from this source so far. We need at least "
                         f"{config.MIN_TIPS_FOR_RECORD} before showing a percentage.")
+    done = [s.tip.posted_on for s in scored if s.horizons.get(config.MAIN_HORIZON)
+            and s.horizons[config.MAIN_HORIZON].status == "scored"]
+    if done:
+        data["period"] = {"first": min(done).isoformat(), "last": max(done).isoformat()}
     recent = [s.to_dict() for s in scored[-12:]]
     if as_of is not None:  # hide any result that was not yet known on the post date
         for tip in recent:

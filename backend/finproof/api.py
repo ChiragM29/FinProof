@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import ai, auditor, config, journal, meta, net, social, study, veteran, youtube
+from . import ai, auditor, config, journal, label, meta, net, social, study, veteran, youtube
 from .card import DISCLAIMER, build_card, wording_problems
 from .chart import WATCHLIST, chart_payload, quote
 from .ledger import Ledger
@@ -109,6 +109,7 @@ def _video_card(vid: str, posted_on: dt.date | None = None, extra_text: str | No
     card["detected"] = _detected(card, day=day, time=time, date_how=note, date_auto=not posted_on,
                                  source=video.get("channel"), source_how="YouTube channel name", source_auto=True)
     card["veteran"] = veteran.build_veteran_brief(card)
+    card["label"] = label.build_label(card, "\n".join(parts))
     return card
 
 
@@ -158,6 +159,7 @@ def _text_card(text: str, req: AnalyzeRequest, *, kind: str = "text", link: str 
     card["detected"] = _detected(card, day=day, time=time, date_how=note, date_auto=not req.posted_on,
                                  source=source, source_how=source_how, source_auto=not req.source)
     card["veteran"] = veteran.build_veteran_brief(card)
+    card["label"] = label.build_label(card, found.body)
     return card
 
 

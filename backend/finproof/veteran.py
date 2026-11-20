@@ -22,7 +22,8 @@ EXTRA_RE = re.compile(r"\b(invest|invests|investing|investments?|bad stocks?|goo
 
 REAL, SYNTHETIC = "REAL", "SYNTHETIC"
 CONTEXT_NOTE = "Past prices only, not a forecast."
-CONTEXT_CODES = ("vwap20", "sma20", "rsi14", "atr14", "levels")
+# The Desk leads with volume and the after-post result; RSI and MACD appear only in Raw Forensic Signals.
+CONTEXT_CODES = ("vwap20", "atr14", "levels")
 MARKET_CODES = {"volume_spike", "thin_trading", "run_up", "fell_after", "be_segment", "bz_segment"}
 # Display names for the raw view (the codes stay in the data for tests and tools).
 FLAG_LABELS = {
@@ -134,7 +135,16 @@ def build_veteran_brief(card: dict) -> dict:
 
     wrong = [w for w in (_wrong_item(w, card) for w in warnings) if w]
     tech = (claim or {}).get("technicals") or {}
-    context = [f for f in tech.get("facts", []) if f["code"] in CONTEXT_CODES]
+    context = []
+    mk0 = (claim or {}).get("market") or {}
+    if mk0.get("spike_ratio") is not None:
+        context.append({"code": "volume", "text": f"Volume: the busiest of the 3 sessions before the post was "
+                                                  f"{mk0['spike_ratio']:.1f}× its 20-day average ({mk0.get('spike_date')})."})
+    after0 = ((claim or {}).get("after_post") or {}).get("horizons", {}).get("30") or {}
+    if after0.get("status") == "scored":
+        context.append({"code": "after", "text": f"After the post: {sym} {_pct(after0['stock_return'])} vs the Nifty 50 "
+                                                 f"{_pct(after0['nifty_return'])} over 30 days."})
+    context += [f for f in tech.get("facts", []) if f["code"] in CONTEXT_CODES]
     after = ((claim or {}).get("after_post") or {}).get("horizons", {}).get("30") or {}
     if after.get("status") == "scored" and not after.get("worked"):
         wrong.append({"code": "claim_failed", "evidence": [],
@@ -225,7 +235,7 @@ def build_veteran_brief(card: dict) -> dict:
         raw.append({"code": "track_record", "label": "Source track record",
                     "value": f"{tr.get('worked')} of {tr.get('scored')} scored tips beat the Nifty 50",
                     "provenance": tr.get("provenance") or REAL})
-    for f in context:
+    for f in tech.get("facts", []):  # every indicator reading, RSI and MACD included
         raw.append({"code": f"tech_{f['code']}", "label": TECH_LABELS.get(f["code"], f["code"]), "value": f["text"],
                     "provenance": REAL})
     for w in warnings:
@@ -238,7 +248,7 @@ def build_veteran_brief(card: dict) -> dict:
                     "value": f"{detected.get('source')} ({detected.get('source_origin')})"})
 
     brief = {"intro": intro, "wrong": wrong, "right": right[:3], "balanced": n == 0, "raw": raw,
-             "context": {"title": "Chart before the post", "as_of": tech.get("as_of"),
+             "context": {"title": "Chart: before and after the post", "as_of": tech.get("as_of"),
                          "note": CONTEXT_NOTE, "facts": context} if context else None,
              "media": media.audit(card), "voice": VOICE, "disclaimer": DISCLAIMER}
     bad = veteran_problems(brief)
