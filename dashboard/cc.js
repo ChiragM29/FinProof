@@ -22,6 +22,8 @@ const SAMPLES = [
     text: "Forwarded from Demo Channel A (synthetic)\n4 Aug 2025\nICICIBANK looking bullish here, tgt 1500 sl 1350" },
   { id: "x-demo", label: "X post · \"leaked interview\"", link: true, text: "https://x.com/SureShotStockIN/status/1931000000000000001" },
   { id: "ig-demo", label: "Instagram reel · AI bot", link: true, text: "https://www.instagram.com/reel/FPdemoReel01/" },
+  { id: "sadhna", label: "Sadhna Broadcast · BSE only", real: true,
+    text: "18 Jul 2022 · SEBI case (REAL prices): Sadhna Broadcast, now Crystal Business System, BSE:CRYSTAL (scrip 540821), not listed on NSE. SEBI's interim order of 2 March 2023 says misleading YouTube videos promoted it in the second half of July 2022." },
 ];
 
 const WHY = {
@@ -123,6 +125,10 @@ async function runScan(text, { sample = null, posted_on = null, source = null, u
   const done = stepsStart();
   const isLink = LINK_RE.test(text);
   try {
+    if (!isLink && !url && !text.includes("\n") && text.length <= 40) {
+      const hist = await fetch(`/api/price-history?q=${encodeURIComponent(text)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (hist) { done(); await showHistory(hist, text); return; }
+    }
     const card = await getJSON("/api/analyze", { method: "POST", headers: JSON_HEADERS,
       body: JSON.stringify({ url: isLink ? text : url, text: isLink ? null : text, posted_on, source, sample: !!sample }) });
     done();
@@ -176,6 +182,7 @@ function showRestricted(r, sample, plain = false) {
 }
 
 function renderMeta() {
+  if (state.card?.mode === "history") return renderHistoryMeta();
   const d = state.card.detected || {};
   const tag = (origin) => (origin === "user" ? " · edited" : origin === "fallback" ? " · fallback" : "");
   const item = (label, value, how) => h("span", { class: "mi", title: how || "" }, h("small", {}, label), h("b", {}, value));
@@ -183,7 +190,8 @@ function renderMeta() {
   $("#meta-strip").replaceChildren(
     item("Date", `${niceDate(d.posted_on)}${d.posted_time ? `, ${d.posted_time} IST` : ""}${tag(d.date_origin)}`, d.date_how),
     item("Source", `${d.source}${tag(d.source_origin)}`, d.source_how),
-    item("Ticker", d.tickers?.length ? d.tickers.join(", ") : "none found"),
+    item("Ticker", d.tickers?.length ? state.card.claims.filter((c) => c.symbol && !c.ambiguous)
+      .map((c) => `${c.symbol.replace(/^BSE:/, "")} · ${c.exchange || "NSE"}`).join(", ") : "none found"),
     item("Platform", d.platform || "Text"),
     state.card.post?.provenance === "SYNTHETIC" ? pill("SYNTHETIC") : "",
     link && /^https?:\/\//.test(link) ? h("a", { class: "mi-link", href: link, target: "_blank", rel: "noopener noreferrer" }, "Open post ↗") : "",
@@ -204,6 +212,7 @@ function kpi(title, bigNode, sub, { tip = "", prov = null, extraClass = "" } = {
 }
 
 function renderKpis() {
+  if (state.card?.mode === "history") return renderHistoryKpis();
   const c = state.card, claim = state.claim, s = c.sebi;
   const sebiMap = {
     registered: ["Registered", "green"], name_match: ["Name match", ""], number_not_found: [s.copy_complete ? "Number not found" : "Not in saved copy", s.copy_complete ? "red" : ""],
@@ -446,7 +455,8 @@ function showOhlc(time) {
   const prev = d.candles[Math.max(0, i - 1)];
   const chg = (b.close / prev.close - 1) * 100;
   const cls = chg >= 0 ? "pos" : "neg";
-  $("#ohlc").replaceChildren(h("span", { class: "sym" }, d.label), h("span", { class: "muted" }, d.company || ""),
+  $("#ohlc").replaceChildren(h("span", { class: "sym" }, d.label), d.exchange && d.exchange !== "INDEX" ? h("span", { class: "exch" }, d.exchange) : "",
+    h("span", { class: "muted" }, d.company || ""),
     ...[["O", b.open], ["H", b.high], ["L", b.low], ["C", b.close]].map(([k, v]) => h("span", { class: cls }, h("b", {}, k), fmt(v))),
     h("span", { class: cls }, `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`), h("span", { class: "muted" }, b.time));
 
@@ -493,6 +503,7 @@ function applyRange() {
 const clipNote = (c) => ["youtube", "instagram", "x"].includes(c.post?.kind) || (c.media?.codes || []).includes("impersonation");
 
 function renderXray() {
+  if (state.card?.mode === "history") return renderHistoryXray();
   const c = state.card;
   const box = $("#tour-xray");
   const raised = Math.min(CHECKS, c.warnings.length);
@@ -557,6 +568,7 @@ function promptButtons() {
 function renderDesk() {
   const v = state.card?.veteran;
   const box = $("#rp-desk");
+  if (state.card?.mode === "history") return renderHistoryDesk();
   if (!v) { box.replaceChildren(h("p", { class: "muted" }, "Scan a tip to see the Desk Note.")); return; }
   const toggle = h("div", { class: "seg", role: "group", "aria-label": "Desk Note view" },
     ...[["mentor", "Beginner Mentor View"], ["raw", "Raw Forensic Signals"]].map(([k, label]) =>
@@ -595,6 +607,12 @@ function renderDesk() {
 function renderLabel() {
   const L = state.card?.label;
   const box = $("#signal-label");
+  if (state.card?.mode === "history") {
+    box.replaceChildren(h("div", { class: "nl-head" }, h("h2", {}, "Price History"), pill("REAL")),
+      h("p", { class: "nl-note" }, state.card.history.note));
+    box.hidden = false;
+    return;
+  }
   if (!L) { box.hidden = true; return; }
   const whyBtn = (text) => {
     const note = h("p", { class: "nl-why", hidden: "" }, text);
@@ -611,9 +629,11 @@ function renderLabel() {
   };
   const t = L.message_type;
   const [tBtn, tNote] = whyBtn(t.why);
+  const reply = state.card.reply ? replyCard(state.card.reply) : "";
   box.replaceChildren(
-    h("div", { class: "nl-head" }, h("h2", {}, L.title), h("span", { class: `nl-type tone-${t.tone}` }, t.value), pill(t.provenance), tBtn),
-    tNote,
+    h("div", { class: "nl-head" }, h("h2", {}, L.title), h("span", { class: `nl-type tone-${t.tone}` }, t.value), pill(t.provenance), tBtn,
+      state.card.reply ? h("button", { type: "button", class: "btn nl-reply", onclick: () => { reply.hidden = !reply.hidden; } }, "Reply card") : ""),
+    tNote, reply,
     h("p", { class: "nl-note" }, L.note),
     h("div", { class: "nl-sec" }, L.right_before.title), ...L.right_before.lines.map(row),
     h("div", { class: "nl-sec" }, L.fair.title), ...L.fair.lines.map(row));
@@ -641,6 +661,128 @@ function loadProblem() {
       h("thead", {}, h("tr", {}, h("th", {}, "The brief says"), h("th", {}, "FinProof's answer"), h("th", {}, "Evidence on screen"), h("th", {}, ""))),
       h("tbody", {}, BRIEF.map(([quote, answer, where, view]) => h("tr", {}, h("td", { class: "pm-quote" }, quote), h("td", {}, answer), h("td", {}, where),
         h("td", {}, h("button", { type: "button", class: "btn ghost", onclick: () => showView(view) }, "Show")))))))));
+}
+
+// ------------------------------------------------------------------ Price History mode (a bare ticker or company name)
+// Past prices only: no post, so nothing to judge and no flags. ("Research" is a regulated term, so not that word.)
+async function showHistory(card, text) {
+  state.card = card;
+  state.text = text;
+  state.url = null;
+  state.sample = null;
+  state.claim = card.claims[0];
+  state.history = [];
+  $("#restricted").hidden = true;
+  renderMeta();
+  renderKpis();
+  renderLabel();
+  renderXray();
+  await setChart(card.history.symbol, {});
+  auditorNote();
+  renderDesk();
+  if ($("#rp-journal").hidden) selectRtab("desk");
+  fitRight();
+}
+
+function historyFacts(hist) {
+  return h("ul", { class: "facts hist-facts" }, hist.facts.map((f) => h("li", {}, f)));
+}
+
+function renderHistoryMeta() {
+  const x = state.card.history;
+  const item = (label, value) => h("span", { class: "mi" }, h("small", {}, label), h("b", {}, value));
+  $("#meta-strip").replaceChildren(item("Mode", "Price History"), item("Ticker", `${x.label} · ${x.exchange}`),
+    item("Company", x.company || "–"), x.nifty50 ? item("Index", "Nifty 50 constituent") : "", item("As of", niceDate(x.as_of)), pill("REAL"));
+}
+
+function renderHistoryKpis() {
+  const x = state.card.history;
+  const perf = x.performance || {};
+  const tile = (title, big, sub) => h("div", { class: "kpi glass fade-swap" }, h("h4", {}, title), h("div", { class: "big" }, big), h("p", {}, sub));
+  const p30 = perf["30 sessions"], p1y = perf["1 year (252 sessions)"];
+  const pts = (q) => (q && q.nifty !== null ? `${((q.stock - q.nifty) * 100 >= 0 ? "+" : "")}${((q.stock - q.nifty) * 100).toFixed(1)} pts` : "Not enough data");
+  $("#kpis").replaceChildren(
+    tile("Last close", x.facts[0].match(/₹[\d,.]+/)?.[0] || "–", niceDate(x.as_of)),
+    tile("30 sessions vs Nifty 50", pts(p30), p30 ? `${x.label} ${pct(p30.stock)} · Nifty ${pct(p30.nifty)}` : "Not enough data"),
+    tile("1 year vs Nifty 50", pts(p1y), p1y ? `${x.label} ${pct(p1y.stock)} · Nifty ${pct(p1y.nifty)}` : "Not enough data"),
+    tile("Warning signals", "None", "No post, so nothing to flag"));
+}
+
+function renderHistoryXray() {
+  const x = state.card.history;
+  $("#tour-xray").replaceChildren(h("h3", {}, "Price History", pill("REAL")),
+    h("p", { class: "small muted" }, x.note), historyFacts(x));
+}
+
+function renderHistoryDesk() {
+  const x = state.card.history;
+  $("#rp-desk").replaceChildren(h("div", { class: "desk-head" }, h("h3", {}, "Price History")),
+    h("p", { class: "desk-intro" }, `${x.label}${x.company ? ` (${x.company})` : ""} on ${x.exchange}. ${x.note}`),
+    h("div", { class: "desk-ctx" }, h("div", { class: "ctx-head" }, h("span", {}, `Past prices · ${niceDate(x.as_of)}`), pill("REAL")), historyFacts(x)),
+    h("p", { class: "desk-disc" }, state.card.disclaimer), h("div", { class: "desk-ask prompts" }, ...promptButtons()));
+}
+
+// ------------------------------------------------------------------ Nifty 50 search beside the scanner
+async function loadNifty50() {
+  try { state.n50 = (await getJSON("/api/nifty50")).companies || []; } catch { state.n50 = []; }
+  renderN50("");
+}
+function renderN50(q) {
+  const key = q.trim().toLowerCase();
+  const rows = (state.n50 || []).filter((r) => !key || r.symbol.toLowerCase().includes(key) || r.name.toLowerCase().includes(key)).slice(0, 50);
+  $("#n50-list").replaceChildren(...(rows.length ? rows.map((r) => h("button", { type: "button", role: "option", class: "sample-item n50-item",
+    onclick: () => { closeSamples(); setScanText(r.symbol); runScan(r.symbol); } }, h("b", {}, r.symbol), h("span", {}, r.name))) : [h("p", { class: "small muted" }, "No match in the Nifty 50.")]));
+}
+
+// ------------------------------------------------------------------ Reply card for WhatsApp groups (facts only)
+function replyCard(reply) {
+  const box = h("div", { class: "reply-pop", hidden: "" });
+  let lang = "en";
+  const draw = () => {
+    const text = reply.texts[lang];
+    const area = h("textarea", { class: "reply-text", rows: "4", readonly: "", "aria-label": "Reply text" });
+    area.value = text;
+    const status = h("span", { class: "small muted" });
+    box.replaceChildren(
+      h("div", { class: "seg reply-langs", role: "group", "aria-label": "Reply language" }, ...Object.entries(reply.langs).map(([k, label]) =>
+        h("button", { type: "button", class: k === lang ? "active" : "", onclick: () => { lang = k; draw(); } }, label))),
+      area,
+      h("div", { class: "reply-actions" },
+        h("button", { type: "button", class: "btn", onclick: async () => {
+          try { await navigator.clipboard.writeText(text); status.textContent = "Copied."; }
+          catch { area.select(); document.execCommand("copy"); status.textContent = "Copied."; }
+        } }, "Copy"), status),
+      reply.checked[lang] ? "" : h("p", { class: "reply-check" }, "Needs a native-speaker check before use."));
+  };
+  draw();
+  return box;
+}
+
+// ------------------------------------------------------------------ Signal Map (Sources tab): two separate axes
+function signalMap(m) {
+  const W = 360, H = 300, pad = 40;
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); if (text) e.textContent = text; return e; };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "smap", role: "img", "aria-label": "Signal Map of sources" });
+  const x = (v) => pad + v * (W - pad - 12), y = (v) => H - pad - v * (H - pad - 12);
+  svg.append(el("rect", { x: pad, y: 12, width: W - pad - 12, height: H - pad - 12, class: "smap-bg" }),
+    el("line", { x1: x(0.5), y1: 12, x2: x(0.5), y2: H - pad, class: "smap-mid" }),
+    el("line", { x1: pad, y1: y(0.5), x2: W - 12, y2: y(0.5), class: "smap-mid" }),
+    el("text", { x: x(0.75), y: y(0.97), class: "smap-q" }, "Right and fair"), el("text", { x: x(0.25), y: y(0.97), class: "smap-q" }, "Honest but wrong"),
+    el("text", { x: x(0.75), y: y(0.03), class: "smap-q" }, "Right but unfair"), el("text", { x: x(0.25), y: y(0.03), class: "smap-q" }, "Wrong and unfair"),
+    el("text", { x: (W + pad) / 2, y: H - 8, class: "smap-ax" }, "Were they right before? →"),
+    el("text", { x: 12, y: H / 2, class: "smap-ax", transform: `rotate(-90 12 ${H / 2})` }, "Are they playing fair? →"));
+  m.plotted.forEach((r) => {
+    const cx = x(r.right), cy = y(r.fair);
+    svg.append(el("circle", { cx, cy, r: 7, class: `smap-dot ${r.provenance === "REAL" ? "real" : "synthetic"}` }),
+      el("text", { x: cx + 10, y: cy + 4, class: "smap-lbl" }, `${r.source_label} (${r.worked}/${r.scored})`));
+  });
+  return h("div", { class: "glass panel rise signal-map" }, h("h2", {}, "Signal Map"),
+    h("p", { class: "small muted" }, m.note), svg,
+    h("p", { class: "small" }, "Across: share of calls that beat the Nifty 50 at 30 days. Up: share of calls with no pump pattern in the prices."),
+    m.plotted.length ? h("p", { class: "small muted" }, "Data: ", ...m.plotted.map((r) => [pill(r.provenance), ` ${r.source_label}  `])) : "",
+    m.not_enough_history.length ? h("p", { class: "small muted" }, `Not enough history (under ${m.min_calls} scored calls): `,
+      m.not_enough_history.map((r) => `${r.source_label} (${r.scored})`).join(", ")) : "");
 }
 
 // ------------------------------------------------------------------ Claim Auditor
@@ -822,6 +964,7 @@ async function loadSources() {
   v.replaceChildren(h("div", { class: "glass panel" }, h("p", { class: "muted" }, "Scoring tips against NSE prices…")));
   try {
     state.sources = state.sources || await getJSON("/api/sources");
+    state.signalMap = state.signalMap || await getJSON("/api/signal-map").catch(() => null);
     const detail = h("div", { class: "glass panel" }, h("p", { class: "muted" }, "Pick a source to see each tip against the Nifty 50."));
     v.replaceChildren(h("div", { class: "view-grid" },
       h("div", { class: "glass panel rise" }, h("h2", {}, "Sources & track records"),
@@ -832,7 +975,7 @@ async function loadSources() {
             h("td", {}, r.source_label), h("td", {}, pill(r.provenance)), h("td", { class: "num" }, r.scored),
             h("td", { class: "num" }, r.enough_history ? `${r.worked} of ${r.scored} (${Math.round(r.hit_rate * 100)}%)` : "not enough history"),
             h("td", { class: `num ${signClass(r.avg_excess_return)}` }, r.enough_history ? pct(r.avg_excess_return) : "–"))))))),
-      detail));
+      detail), state.signalMap ? signalMap(state.signalMap) : "");
   } catch (err) {
     v.replaceChildren(h("div", { class: "glass panel neg" }, String(err.message || err)));
   }
@@ -895,15 +1038,16 @@ function loadFailures() {
 
 // ------------------------------------------------------------------ Judge Tour
 const TOUR = [
-  { target: "#view-problem", view: "problem", title: "Problem Map", text: "Every line of the brief, the feature that answers it, and where to see it. We never rate stocks: we rate the message and keep score on the messenger." },
-  { target: "#tour-scanner", title: "Zero-input scanner", text: "Paste a YouTube, Instagram or X link, or a forward. FinProof finds the date, source and stock itself. Try Samples ▾." },
-  { target: "#tour-chart", title: "Candles + volume spike", text: "Real NSE prices. The blue pin marks the post; red is a volume spike before it. Indicators are one click away." },
-  { target: "#tour-xray", title: "Credibility X-Ray", text: "Every flag quotes the post. Media & impersonation cues, then the source's past record." },
-  { target: "#tour-auditor", title: "Veteran's Desk Note", text: "The facts, explained like a calm mentor: what is wrong here and how a pro checks it. Raw Forensic Signals shows every number.",
-    before: () => { showView("workspace"); state.deskView = "mentor"; renderDesk(); selectRtab("desk"); } },
-  { target: "#tour-auditor", title: "Claim Auditor: live refusal", text: "Asked the one question it must never answer, it refuses and shows the facts instead.",
-    before: () => { showView("workspace"); selectRtab("auditor"); if (state.prompts[0]) ask(state.prompts[0]); } },
-  { target: "#nav-study", title: "Decision study", text: "A counterbalanced study measures whether the card helps people skip bad tips. Results update live." },
+  { target: "#view-problem", view: "problem", title: "1. Problem Map", text: "Every line of the brief, the feature that answers it, and where to see it. We never rate stocks: we rate the message and keep score on the messenger." },
+  { target: "#tour-auditor", title: "2. A WhatsApp VIP tip, judged", text: "The Signal or Noise label comes first: were they right before, and are they playing fair? Each line has a REAL or SYNTHETIC tag and a why.",
+    before: () => { selectRtab("desk"); const s = SAMPLES.find((x) => x.id === "vip-upi"); if (state.sample !== s.id) { setScanText(s.text); runScan(s.text, { sample: s.id }).then(tourPlace); } } },
+  { target: "#tour-chart", title: "3. A real SEBI case on BSE", text: "Sadhna Broadcast is listed only on BSE, so an NSE-only tool cannot see it. Real BSE prices: volume up to 12× its average and the price up 149% in the promotion window, then back down.",
+    before: () => { const s = SAMPLES.find((x) => x.id === "sadhna"); if (state.claim?.symbol !== "BSE:CRYSTAL") { setScanText(s.text); runScan(s.text).then(tourPlace); } } },
+  { target: "#view-sources", view: "sources", title: "4. Track record and Signal Map", text: "Every source is scored over time on two separate axes: right before, and playing fair. Too few calls: not enough history." },
+  { target: "#view-study", view: "study", title: "5. Decision Study", text: "Each person sees half the tips with the label and half without. Metrics fixed in advance; results update live on /results.html." },
+  { target: "#view-failures", view: "failures", title: "6. Failure Cases", text: "Where FinProof went wrong on real data, and what we changed." },
+  { target: "#tour-auditor", title: "7. The refusal", text: "Asked the one question it must never answer, the Claim Auditor refuses and shows the facts instead.",
+    before: () => { selectRtab("auditor"); if (state.prompts[0]) ask(state.prompts[0]); } },
 ];
 let tourAt = -1;
 
@@ -989,13 +1133,17 @@ function fitRight() {
 }
 addEventListener("scroll", tourPlace, { passive: true });
 // Samples ▾: the made-up demo posts and links, grouped in one popover instead of a row of buttons.
-function closeSamples() { $("#samples-pop").hidden = true; $("#samples-btn").setAttribute("aria-expanded", "false"); }
+function closeSamples() {
+  $("#samples-pop").hidden = true; $("#samples-btn").setAttribute("aria-expanded", "false");
+  $("#n50-pop").hidden = true; $("#n50-btn").setAttribute("aria-expanded", "false");
+}
 function renderSamples() {
   const item = (s) => h("button", { type: "button", role: "menuitem", class: "sample-item", "data-id": s.id,
-    onclick: () => { setScanText(s.text); runScan(s.text, { sample: s.id }); } }, s.label);
+    onclick: () => { setScanText(s.text); runScan(s.text, { sample: s.real ? null : s.id }); } }, s.label);
   $("#samples-pop").replaceChildren(h("div", { class: "sp-head" }, "Demo samples ", pill("SYNTHETIC")),
-    h("div", { class: "sp-group" }, "Posts"), ...SAMPLES.filter((s) => !s.link).map(item),
-    h("div", { class: "sp-group" }, "Links (cached)"), ...SAMPLES.filter((s) => s.link).map(item));
+    h("div", { class: "sp-group" }, "Posts"), ...SAMPLES.filter((s) => !s.link && !s.real).map(item),
+    h("div", { class: "sp-group" }, "Links (cached)"), ...SAMPLES.filter((s) => s.link).map(item),
+    h("div", { class: "sp-group sp-real" }, "Real SEBI case ", pill("REAL")), ...SAMPLES.filter((s) => s.real).map(item));
 }
 $("#samples-btn").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -1004,6 +1152,15 @@ $("#samples-btn").addEventListener("click", (e) => {
   $("#samples-btn").setAttribute("aria-expanded", String(open));
 });
 document.addEventListener("click", (e) => { if (!e.target.closest(".samples-wrap")) closeSamples(); });
+$("#n50-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = $("#n50-pop").hidden;
+  closeSamples();
+  $("#n50-pop").hidden = !open;
+  $("#n50-btn").setAttribute("aria-expanded", String(open));
+  if (open) { $("#n50-q").value = ""; renderN50(""); $("#n50-q").focus(); }
+});
+$("#n50-q").addEventListener("input", (e) => renderN50(e.target.value));
 renderSamples();
 
 // Header status: HYBRID · LIVE when the network answers, HYBRID · CACHE when it does not.
@@ -1024,6 +1181,7 @@ setInterval(refreshStatus, 30000);
 (async function start() {
   await refreshStatus();
   try { state.prompts = await getJSON("/api/auditor/prompts"); } catch { state.prompts = []; }
+  loadNifty50();
   renderPrompts();
   fitRight();
   state.user = store.get("finproof-user", null);

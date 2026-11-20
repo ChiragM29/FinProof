@@ -211,6 +211,14 @@ def build_veteran_brief(card: dict) -> dict:
         intro = ("This post is calm: no countdown, no promised returns, no payment request. That is a good start, but a "
                  "calm tone is not the same as a correct claim. The habits below still apply.")
 
+    case = card.get("case")
+    if case:
+        intro = (f"This is a real SEBI case. {case['summary']} The prices below are what anyone following the "
+                 "videos would have seen.")
+        lines = (case.get("facts") or {}).get("lines") or []
+        wrong.insert(0, {"code": "sebi_case", "evidence": [], "title": "Named in a SEBI order",
+                         "text": f"{case['listing']} " + " ".join(lines)})
+
     # Raw Forensic Signals: every number and quote behind the note. Findings read from the post carry the
     # post's own label (SYNTHETIC for a made-up demo post); market data and the ledger keep theirs.
     post_prov = (card.get("post") or {}).get("provenance") or REAL
@@ -247,7 +255,7 @@ def build_veteran_brief(card: dict) -> dict:
         raw.append({"code": "detected_source", "label": "Detected source", "provenance": post_prov,
                     "value": f"{detected.get('source')} ({detected.get('source_origin')})"})
 
-    brief = {"intro": intro, "wrong": wrong, "right": right[:3], "balanced": n == 0, "raw": raw,
+    brief = {"intro": intro, "wrong": wrong, "right": right[:3], "balanced": n == 0 and not case, "raw": raw,
              "context": {"title": "Chart: before and after the post", "as_of": tech.get("as_of"),
                          "note": CONTEXT_NOTE, "facts": context} if context else None,
              "media": media.audit(card), "voice": VOICE, "disclaimer": DISCLAIMER}

@@ -22,13 +22,42 @@ HISTORY_START = "2018-01-01"
 COLUMNS = ["Open", "High", "Low", "Close", "Adj Close", "Volume"]
 
 
+BSE_PREFIX = "BSE:"
+
+
+def split_exchange(symbol: str) -> tuple[str, str | None]:
+    """'BSE:CRYSTAL' -> ('CRYSTAL', 'BSE'); 'ITC' -> ('ITC', None). A bare 'BSE' is the company BSE Ltd."""
+    s = symbol.strip().upper()
+    if s.startswith(BSE_PREFIX) and len(s) > len(BSE_PREFIX):
+        return s[len(BSE_PREFIX):].strip(), "BSE"
+    return s, None
+
+
+def display_symbol(symbol: str) -> str:
+    return split_exchange(symbol)[0]
+
+
 def yahoo_ticker(symbol: str) -> str:
-    """NSE symbol -> Yahoo ticker. Index (^) and BSE (.BO) tickers pass through.
-    Old symbols (e.g. TATAMOTORS) are mapped to today's symbol first."""
+    """NSE symbol -> Yahoo ticker; 'BSE:XYZ' -> 'XYZ.BO'. Index (^), .NS and .BO tickers pass through.
+    Old NSE symbols (e.g. TATAMOTORS) are mapped to today's symbol first."""
     s = symbol.strip().upper()
     if s.startswith("^") or s.endswith((".NS", ".BO")):
         return s
+    bare, exchange = split_exchange(s)
+    if exchange == "BSE":
+        return f"{bare}.BO"
     return f"{current_symbol(s)}.NS"
+
+
+def exchange_of(prices, symbol: str) -> str:
+    """Which exchange a symbol's prices came from: NSE (default), or BSE for 'BSE:' symbols and the BSE fallback."""
+    s = symbol.strip().upper()
+    if s.startswith("^"):
+        return "INDEX"
+    if split_exchange(s)[1] == "BSE" or s.endswith(".BO"):
+        return "BSE"
+    df = prices.history(s)
+    return getattr(df, "attrs", {}).get("exchange") or "NSE"
 
 
 @lru_cache(maxsize=1)
@@ -72,7 +101,21 @@ class YahooPrices:
         self._memo: dict[str, pd.DataFrame] = {}
 
     def history(self, symbol: str) -> pd.DataFrame:
-        ticker = yahoo_ticker(symbol)
+        """NSE first. BSE (.BO) when the post says BSE:<SYMBOL>, or when NSE has no data for the symbol."""
+        s = symbol.strip().upper()
+        ticker = yahoo_ticker(s)
+        if s.startswith("^"):
+            return self._load(ticker, "INDEX")
+        if ticker.endswith(".BO"):
+            return self._load(ticker, "BSE")
+        df = self._load(ticker, "NSE")
+        if df.empty:
+            bse = self._load(f"{split_exchange(s)[0]}.BO", "BSE")
+            if not bse.empty:
+                return bse
+        return df
+
+    def _load(self, ticker: str, exchange: str) -> pd.DataFrame:
         if ticker in self._memo:
             return self._memo[ticker]
         path = self.cache_dir / _cache_name(ticker)
@@ -92,6 +135,7 @@ class YahooPrices:
                 df = _read(path) if path.exists() else _empty()
             if df.empty and path.exists():
                 df = _read(path)
+        df.attrs["exchange"] = exchange
         self._memo[ticker] = df
         return df
 

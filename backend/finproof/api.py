@@ -12,7 +12,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import ai, auditor, config, journal, label, meta, net, social, study, veteran, youtube
+from . import (ai, auditor, cases, config, history, journal, label, meta, net, reply, signalmap, social, study, veteran,
+               youtube)
 from .card import DISCLAIMER, build_card, wording_problems
 from .chart import WATCHLIST, chart_payload, quote
 from .ledger import Ledger
@@ -110,6 +111,7 @@ def _video_card(vid: str, posted_on: dt.date | None = None, extra_text: str | No
                                  source=video.get("channel"), source_how="YouTube channel name", source_auto=True)
     card["veteran"] = veteran.build_veteran_brief(card)
     card["label"] = label.build_label(card, "\n".join(parts))
+    card["reply"] = reply.build(card)
     return card
 
 
@@ -158,8 +160,10 @@ def _text_card(text: str, req: AnalyzeRequest, *, kind: str = "text", link: str 
                       kind=kind, channel=source, source_key=handle or source, link=link, post_provenance=prov)
     card["detected"] = _detected(card, day=day, time=time, date_how=note, date_auto=not req.posted_on,
                                  source=source, source_how=source_how, source_auto=not req.source)
+    cases.attach(card, PRICES)  # a real SEBI case stock gets its order and computed price facts
     card["veteran"] = veteran.build_veteran_brief(card)
     card["label"] = label.build_label(card, found.body)
+    card["reply"] = reply.build(card)
     return card
 
 
@@ -232,7 +236,7 @@ def source(source_id: str) -> dict:
 # ------------------------------------------------------------------ terminal: chart, auditor, journal
 
 def _valid_symbol(symbol: str) -> bool:
-    return len(symbol) <= 20 and symbol.lstrip("^").replace("&", "").replace("-", "").isalnum()
+    return len(symbol) <= 24 and symbol.lstrip("^").replace("&", "").replace("-", "").replace(":", "", 1).isalnum()
 
 
 @app.get("/api/chart/{symbol}")
@@ -244,6 +248,29 @@ def chart(symbol: str, levels_before: dt.date | None = None) -> dict:
     if data is None:
         raise HTTPException(status_code=404, detail=f"No NSE price data for {symbol.upper()}.")
     return data
+
+
+@app.get("/api/nifty50")
+def nifty50() -> dict:
+    """The 50 Nifty 50 companies (NSE's own constituents file, dated) for the search box."""
+    rows = history.nifty50()
+    return {"companies": rows, "count": len(rows), "as_of": rows[0]["as_of"] if rows else None,
+            "provenance": config.REAL_LABEL, "source": "NSE index constituents file (ind_nifty50list.csv)"}
+
+
+@app.get("/api/price-history")
+def price_history(q: str) -> dict:
+    """Price History mode for a bare ticker or company name: chart facts only, past prices, no flags."""
+    symbol = history.resolve(q)
+    card = history.build(symbol, PRICES) if symbol else None
+    if card is None:
+        raise HTTPException(status_code=404, detail="Not a Nifty 50 ticker or company name with price data.")
+    return card
+
+
+@app.get("/api/signal-map")
+def signal_map() -> dict:
+    return signalmap.build(LEDGER, PRICES)
 
 
 @app.get("/api/quotes")

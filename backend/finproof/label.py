@@ -157,6 +157,18 @@ def build_label(card: dict, text: str = "") -> dict:
         fair.append(edu)
 
     kind, tone = message_type(card)
+    case = card.get("case")
+    if case:  # a real SEBI case: the order and the computed price facts replace the post-based lines
+        f = case.get("facts") or {}
+        why = f"{case['order']}. Sources: " + "; ".join(x["label"] for x in case.get("sources", []))
+        order = _line("order", "SEBI order", case["summary"], config.REAL_LABEL, "danger")
+        order["why"] = why
+        listing = _line("listing", "Exchange", case["listing"], config.REAL_LABEL, "info")
+        listing["why"] = "An NSE-only tool cannot see this stock; FinProof falls back to BSE prices."
+        pump = _line("pump", "Pump pattern", " ".join(f.get("lines", [])) or "Not enough data", config.REAL_LABEL, "danger")
+        pump["why"] = why
+        fair = [order, listing, pump]
+        kind, tone = "Pump pattern (SEBI case)", "danger"
     out = {"title": TITLE, "note": NOTE,
             "message_type": _line("type", "Message type", kind, post_prov, tone),
             "right_before": {"title": "Were they right before?", "lines": [record]},

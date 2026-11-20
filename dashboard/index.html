@@ -40,6 +40,14 @@
             <button class="samples-btn" id="samples-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="samples-pop">Samples ▾</button>
             <div class="samples-pop" id="samples-pop" role="menu" hidden></div>
           </div>
+          <div class="samples-wrap n50-wrap">
+            <button class="samples-btn" id="n50-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="n50-pop">Nifty 50 ▾</button>
+            <div class="samples-pop n50-pop" id="n50-pop" hidden>
+              <input id="n50-q" type="search" spellcheck="false" autocomplete="off" placeholder="Search the Nifty 50…" aria-label="Search Nifty 50 companies">
+              <div class="n50-list" id="n50-list" role="listbox" aria-label="Nifty 50 companies"></div>
+              <p class="small muted n50-note">NSE's own list · Price History: past prices only</p>
+            </div>
+          </div>
           <button class="scan-btn" id="scan-btn" type="submit">Scan Tip</button>
         </form>
         <div class="steps" id="steps" aria-live="polite" hidden>

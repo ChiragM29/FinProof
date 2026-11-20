@@ -16,7 +16,7 @@ import pandas as pd
 
 from . import config, extract, indicators, media, pumpdump, sebi
 from .ledger import Ledger, Tip, score_tip
-from .market import nse_companies
+from .market import exchange_of, nse_companies
 
 DISCLAIMER = ("FinProof checks the source and the information quality of a post. "
               "It is not investment advice and does not rate any stock.")
@@ -245,6 +245,7 @@ def build_card(*, text: str, ledger: Ledger, prices, posted_on: dt.date, posted_
         elif len([x for x in claims if not x["ambiguous"]]) < max_stocks:
             sig = pumpdump.market_signals(c.symbol, posted_on, prices, include_after=not point_in_time)
             item["market"] = sig.to_dict()
+            item["exchange"] = exchange_of(prices, c.symbol)
             tech = indicators.snapshot(prices.history(c.symbol), posted_on)  # sessions before the post only
             if tech:
                 item["technicals"] = tech

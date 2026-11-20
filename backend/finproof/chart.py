@@ -7,7 +7,7 @@ import math
 import pandas as pd
 
 from . import config, indicators
-from .market import company_name, current_symbol
+from .market import company_name, current_symbol, display_symbol, exchange_of, split_exchange
 from .pumpdump import BASE_WINDOW, VOLUME_SPIKE_RATIO, volume_anomalies
 
 CHART_START = "2019-01-01"
@@ -18,7 +18,9 @@ NIFTY_NAMES = {"NIFTY", "NIFTY50", "NIFTY 50", "^NSEI"}
 
 def resolve(symbol: str) -> str:
     s = symbol.strip().upper()
-    return config.BENCHMARK if s in NIFTY_NAMES else current_symbol(s)
+    if s in NIFTY_NAMES:
+        return config.BENCHMARK
+    return s if split_exchange(s)[1] == "BSE" else current_symbol(s)
 
 
 def quote(symbol: str, prices) -> dict | None:
@@ -70,8 +72,9 @@ def chart_payload(symbol: str, prices, start: str = CHART_START, levels_before: 
     nifty = [{"time": d.strftime("%Y-%m-%d"), "value": v} for d, v in
              ((d, _num(x)) for d, x in bench["Close"].items()) if v is not None] if not bench.empty else []
     return {
-        "symbol": sym, "label": "NIFTY 50" if sym == config.BENCHMARK else sym, "requested": symbol.upper(),
-        "company": "Nifty 50 index" if sym == config.BENCHMARK else company_name(sym),
+        "symbol": sym, "label": "NIFTY 50" if sym == config.BENCHMARK else display_symbol(sym), "requested": symbol.upper(),
+        "company": "Nifty 50 index" if sym == config.BENCHMARK else company_name(display_symbol(sym)),
+        "exchange": exchange_of(prices, sym),
         "provenance": config.REAL_LABEL, "source": "NSE prices via Yahoo Finance",
         "candles": candles, "volume": volume, "nifty": nifty,
         "spike_ratio": VOLUME_SPIKE_RATIO, "spike_window": BASE_WINDOW,

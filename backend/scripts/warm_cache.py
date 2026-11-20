@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from finproof import config, journal, social, youtube  # noqa: E402
+from finproof import cases, config, history, journal, social, youtube  # noqa: E402
 from finproof.card import build_card  # noqa: E402
 from finproof.chart import WATCHLIST, chart_payload  # noqa: E402
 from finproof.ledger import Ledger  # noqa: E402
@@ -49,6 +49,8 @@ def main(video_ids: list[str]) -> int:
     for path in sorted((config.ROOT / "eval" / "decision_test").glob("tips_*.json")):
         symbols |= {t["symbol"] for t in json.loads(path.read_text(encoding="utf-8")).get("tips", [])}
     symbols |= {e["symbol"] for e in journal.demo_seed()} | set(WATCHLIST)
+    symbols |= {r["symbol"] for r in history.nifty50()}      # Price History works offline for all 50
+    symbols |= {c["symbol"] for c in cases.CASES}             # the real SEBI case on BSE (BSE:CRYSTAL)
     for vid in video_ids:
         vid = youtube.video_id(vid)
         if not vid:

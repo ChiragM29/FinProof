@@ -14,6 +14,10 @@ from .market import company_name, current_symbol, nse_companies, symbol_changes
 
 # NSE symbols that are also ordinary words in tip messages.
 SYMBOL_BLOCKLIST = {"BSE", "AVG", "PAR", "DEN", "TRU"}
+# "BSE:CRYSTAL", "BSE: 540821", "bse-crystal": a listing on BSE. A bare "BSE" in prose is the exchange, so it
+# counts as the company BSE Ltd only when tagged (#BSE, $BSE) or written "BSE Ltd" / "BSE Limited" / "BSE share(s)".
+BSE_PREFIX_RE = re.compile(r"(?<![A-Za-z0-9])BSE\s*[:\-]\s*([A-Za-z][A-Za-z0-9&\-]{1,19}|\d{6})(?![A-Za-z0-9])", re.I)
+BSE_COMPANY_RE = re.compile(r"\s*(?:ltd|limited|shares?|stock)\b", re.I)
 
 # Words that should never count as a company name on their own.
 COMMON_WORDS = set("""
@@ -218,10 +222,22 @@ def find_stocks(text: str) -> list[tuple[int, int, str | None, list[str], str]]:
     def free(a: int, b: int) -> bool:
         return all(b <= x or a >= y for x, y in taken)
 
+    # 0. Exchange prefix: "BSE:CRYSTAL" (or BSE: 540821) names a BSE listing, whether or not NSE lists it.
+    for m in BSE_PREFIX_RE.finditer(text):
+        sym = f"BSE:{m.group(1).upper()}"
+        found.append((m.start(), m.end(), sym, [sym], m.group(0)))
+        taken.append((m.start(), m.end()))
+
     # 1. Exact NSE symbols written in capitals, or tagged with # or $.
     for m in re.finditer(r"(?<![A-Za-z0-9])[#$]?([A-Z][A-Z0-9&\-]{1,19})(?![A-Za-z0-9])", text):
         sym = m.group(1)
         tagged = m.group(0)[0] in "#$"
+        if not free(m.start(), m.end()):
+            continue
+        if sym == "BSE" and (tagged or BSE_COMPANY_RE.match(text, m.end())):
+            found.append((m.start(), m.end(), "BSE", ["BSE"], m.group(0)))  # the company BSE Ltd (a Nifty 50 stock)
+            taken.append((m.start(), m.end()))
+            continue
         if sym in known and sym not in SYMBOL_BLOCKLIST and (len(sym) >= 3 or tagged):
             sym = current_symbol(sym)
             found.append((m.start(), m.end(), sym, [sym], m.group(0)))
@@ -315,7 +331,7 @@ def extract(text: str) -> Extraction:
         if claim is None:
             original = matched.lstrip("#$").upper()
             claim = StockClaim(
-                symbol=sym, company=company_name(sym) if sym else None, mentions=0,
+                symbol=sym, company=company_name(sym.removeprefix("BSE:")) if sym else None, mentions=0,
                 direction=direction, ambiguous=sym is None, candidates=cands, matched_text=matched,
                 renamed_from=original if sym and original != sym and original in symbol_changes() else None,
             )
