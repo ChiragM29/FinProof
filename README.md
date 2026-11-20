@@ -74,12 +74,14 @@ finproof/
 
 ## Team
 
+Team **VVCE Builders**.
+
 | Member | Owns |
 |---|---|
-| Thaha Ahmed Baig (team leader) | _role_ |
-| Chirag M | _role_ |
-| Salahudheen Ayyubhi | _role_ |
-| R P Jeetender Singh | _role_ |
+| Thaha Ahmed Baig (team leader) | [TEAM: fill in, e.g. pitch, decision study] |
+| Chirag M | [TEAM: fill in, e.g. backend and data] |
+| Salahudheen Ayyubhi | [TEAM: fill in] |
+| R P Jeetender Singh | [TEAM: fill in] |
 
 ## How we work
 
@@ -129,7 +131,26 @@ cd backend
 ..\.venv\Scripts\python -m uvicorn finproof.api:app --port 8000
 ```
 
-Open http://localhost:8000: FinProof opens with a sample case already scanned. Paste any WhatsApp/Telegram forward or YouTube link and press **Scan Tip**; click **▶ Judge Tour** for the 6-step walkthrough (scanner → chart → X-Ray → Veteran's Desk → live refusal → decision study). (`/terminal` now redirects to `/`.)
+Open http://localhost:8000: FinProof opens with a sample case already scanned. Paste any WhatsApp/Telegram forward or YouTube link and press **Scan Tip**; click **▶ Judge Tour** for the 7-step walkthrough (Problem Map → a WhatsApp tip and its label → the real SEBI case on BSE → track record and Signal Map → Decision Study → Failure Cases → the refusal). The full talk track is in [DEMO-SCRIPT.md](DEMO-SCRIPT.md). (`/terminal` now redirects to `/`.)
+
+## Round 2: what each line of the brief maps to
+
+| The brief says | FinProof's answer |
+|---|---|
+| "A few finfluencers are registered with SEBI. Most are not." | SEBI registration check against a dated copy of SEBI's research analyst and investment adviser lists |
+| "Some tips are honest but wrong." | "Were they right before?": the ledger track record, kept separate from fairness |
+| "Others are part of pump-and-dump schemes." | Pump-pattern check (volume before the post, price after it) and a real SEBI case on BSE (Sadhna Broadcast) |
+| "Nobody tracks most tips over time..." | The tip ledger, the Sources tab with the Signal Map, and 7/30-day outcomes in the Noise Journal |
+| "Retail investors act on information whose quality they cannot judge" | The Signal or Noise label and the Veteran's Desk explanations |
+| "get much of their information from social media" | WhatsApp, Telegram, YouTube, X and Instagram input, the Chrome extension, and a reply card in English, Kannada and Hindi |
+| "measurably improves how a retail investor makes decisions" | The Decision Study: crossover design, metrics fixed in advance, live results |
+| "without ever telling them what to buy or sell" | The no-advice test over every string, the Claim Auditor's refusal card, past prices only |
+
+**The Signal or Noise label** sits at the top of the right panel. "Were they right before?" shows the source's record (N calls, the share that beat the Nifty 50 at 30 days, the period); below 10 calls it says "Not enough history". "Are they playing fair?" lists SEBI registration (with the snapshot date), conflict disclosure, pressure signals, the payment route (personal UPI vs SEBI-validated @valid), the pump pattern, liquidity and NSE surveillance status (dated snapshot). One line gives the message type: Education, Opinion, Unverified tip, Pressure pitch or Pump pattern. Every line has a REAL or SYNTHETIC tag and a "why" that cites the rule or the source.
+
+**BSE fallback.** NSE first; BSE when NSE has no data or the post writes `BSE:<SYMBOL>`. A bare "BSE" is the company BSE Ltd (now a Nifty 50 stock) only when written #BSE, $BSE or "BSE Ltd". Every ticker shows NSE or BSE.
+
+**Price History** (not "research", a regulated term): type a Nifty 50 ticker or company name, or use the **Nifty 50 ▾** search, to see that stock's chart with past prices only. No post, so no flags.
 
 ## The Command Center, piece by piece
 
@@ -177,4 +198,10 @@ $env:FINPROOF_OFFLINE = "1"
 
 ## Prior work
 
-_List here any code or ideas reused from earlier projects, so the judges know exactly what was built during the event._
+What FinProof reuses, so the judges know exactly what was built during the event:
+
+- **Look and fonts from our earlier project T.R.U.C.E. AI** (truthshield-ai): the colour values, panel and button styles in `dashboard/truce.css`, and three font files (Inter, Space Grotesk, JetBrains Mono, SIL Open Font License, licences in `dashboard/fonts`). The idea of a browser-extension card also came from T.R.U.C.E. AI.
+- **Libraries**, used unchanged: TradingView Lightweight Charts 5.3.0 (Apache-2.0, bundled in `dashboard/vendor`), FastAPI, pandas, NumPy, yfinance, youtube-transcript-api, httpx, and the Anthropic SDK (optional AI answers).
+- **Data** from public sources, each dated in its file name: NSE company, symbol-change, Nifty 50 constituent and surveillance lists; a partial copy of SEBI's registered lists; prices via Yahoo Finance.
+- **AI assistance:** parts of the code and documents were written with an AI coding assistant (Claude Code); the commits say so.
+- [TEAM: add any other code reused from earlier projects, and confirm when coding started.]

@@ -14,7 +14,7 @@ The challenge asks for a tool that *measurably* improves decisions. This test me
 - **Each person sees both:** one set with the FinProof card, the other without it.
 - **Four groups, assigned in turn:** which set gets the card × whether the card part comes first. This balances tip difficulty and practice effects. Tip order inside each part is shuffled per person.
 - **The card shows only the past:** in the test, the card uses only what was known before the tip was posted. It has no "what happened after", no fall-after signal, and a track record counting only tips whose result was already known. The indicator readings on each card (SMA, VWAP, RSI, ATR, key levels) are taken from the last session before the post. Tests check all of this, including that changing every price after the post leaves the card unchanged.
-- **Question per tip:** "Would you act on this tip?" (yes or no), then "How sure are you?" (1-3). Time to answer is recorded.
+- **Question per tip:** "Would you act on this tip?" (yes or no), then "How sure are you?" (1-5). Time to answer is recorded.
 - **People:** at least 20, aiming for 30. No names are collected.
 
 ### Success, decided in advance
@@ -23,6 +23,7 @@ The challenge asks for a tool that *measurably* improves decisions. This test me
 |---|---|---|
 | H1 | With the card, people act on fewer bad tips | 95% CI of the within-person difference is entirely below 0 |
 | H2 | With the card, people don't lose trust in good tips | Lower end of the 95% CI of the difference is above −10 points |
+| Calibration | Confidence matches outcomes better with the card | Brier score of confidence vs outcome (lower is better); fixed 21 Nov 2026, 04:15 IST, before any participant data |
 
 Reported with each: the mean for each condition, the difference, a bootstrap 95% CI over people, and a paired sign-flip permutation p-value. As a check, the first part alone is also compared between people who saw the card first and people who didn't, since that comparison has no carry-over. Everything is recomputed from the answer log.
 
@@ -72,7 +73,7 @@ H2 matters because a tool that makes people distrust every tip would "pass" H1 f
 
 `decision_test/tips_practice.json` holds 12 **made-up posts** on real stocks and dates, built by `backend/scripts/make_practice_test.py`, so the screens can be tried before real tips exist. The writing style of each post was picked at random, independently of its outcome, so **the card is not expected to help on the practice set**. Its answers are git-ignored and are never evidence. Once `tips_real.json` exists, the server uses it automatically.
 
-## Automated checks (250 tests)
+## Automated checks (287 tests)
 
 | Area | What the tests prove |
 |---|---|
@@ -83,6 +84,7 @@ H2 matters because a tool that makes people distrust every tip would "pass" H1 f
 | Hybrid auditor | Mocked timeout, lost connection, quota and server errors all return the local answer in under a second, then skip the API during a cool-down |
 | Hybrid mode and links | YouTube fetched live when online and cached, cache used when the network drops; X and Instagram links detected and tagged; login walls, rate limits and timeouts give the paste-caption prompt, never an error; the suite never touches the real network |
 | Media cues | Impersonation, scam-funnel and missing-context flags on the right posts and not on group names or calls that mention risk; every new string free of advice |
+| Round 2 | The Signal or Noise label (two separate axes, tags, "not enough history" below 10 calls, the education rule only from 1 July 2026), BSE fallback and the BSE Ltd clash, Price History (exactly 50 Nifty 50 companies, no flags), the real SEBI case computed from prices, the reply card in 3 languages, the Signal Map, NSE surveillance and journal outcomes |
 
 ## 2. Extraction accuracy
 
