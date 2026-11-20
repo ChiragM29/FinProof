@@ -1,0 +1,48 @@
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+
+# Extension packages
+*.zip
+*.crx
+
+# Large or regenerated data
+data/cache/
+data/raw/
+*.mp4
+*.mp3
+*.wav
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Decision test: practice answers are not evidence (real answers are committed)
+eval/decision_test/responses/responses_practice.jsonl

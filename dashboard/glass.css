@@ -1,0 +1,46 @@
+/* Obsidian glass theme for study.html and results.html: colours only, no layout changes. */
+body {
+  --bg: #0b0f17;
+  --surface: #121826;
+  --text: #e2e8f0;
+  --muted: #8b98ab;
+  --border: #1e293b;
+  --accent: #38bdf8;
+  --accent-text: #04121c;
+  --good: #10b981;
+  --good-bg: rgba(16, 185, 129, 0.13);
+  --warn: #ef4444;
+  --warn-bg: rgba(239, 68, 68, 0.13);
+  --info-bg: rgba(56, 189, 248, 0.12);
+  --real: #10b981;
+  --synthetic: #f59e0b;
+  --radius: 14px;
+  color-scheme: dark;
+  background:
+    radial-gradient(60% 40% at 15% 0%, rgba(56, 189, 248, 0.10), transparent 70%),
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px) 0 0 / 44px 44px,
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+}
+.top { background: rgba(9, 13, 21, 0.85); backdrop-filter: blur(12px); border-bottom-color: var(--border); }
+.logo { color: #fff; text-shadow: 0 0 16px rgba(56, 189, 248, 0.45); text-decoration: none; }
+.card, .input-card, .post {
+  background: rgba(18, 24, 38, 0.82); border-color: var(--border); backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.post { border-left-color: var(--accent); }
+button.primary { background: linear-gradient(135deg, #38bdf8, #10b981); color: #04121c; }
+.choice { background: rgba(2, 6, 12, 0.55); border-color: var(--border); color: var(--text); }
+.choice.selected { border-color: var(--accent); background: rgba(56, 189, 248, 0.16); box-shadow: 0 0 14px rgba(56, 189, 248, 0.2); }
+.progress .fill { background: linear-gradient(90deg, #38bdf8, #10b981); }
+.banner { background: rgba(56, 189, 248, 0.1); border-bottom-color: var(--border); }
+.warn-banner { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+.tab { color: var(--muted); }
+th { color: var(--muted); }
+th, td { border-bottom-color: var(--border); }
+code.url { background: rgba(2, 6, 12, 0.6); border-color: var(--border); }
+.chip { background: rgba(2, 6, 12, 0.55); border-color: var(--border); color: var(--text); }
+.kv { grid-template-columns: max-content minmax(0, 1fr); }
+.kv dd { overflow-wrap: anywhere; min-width: 0; }
