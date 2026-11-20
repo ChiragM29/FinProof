@@ -12,7 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 
-from . import config, media
+from . import config, media, surveillance
 
 TITLE = "Signal or Noise"
 NOTE = "Judges the message and its sender, never the stock."
@@ -38,6 +38,10 @@ WHY = {
                "handles.",
     "pump": "Pattern from SEBI pump-and-dump orders: unusual trading before a promotion, a poor showing after it "
             "(e.g. Sadhna Broadcast, SEBI interim order of 2 March 2023).",
+    "liquidity": "Average daily traded value (price x volume) over the 20 sessions before the post. Thinly traded "
+                 "stocks (under ₹1 crore a day) are easier to move.",
+    "surveillance": "NSE's own Additional (ASM), Graded (GSM) and Enhanced (ESM) Surveillance Measure lists, saved as a "
+                    "dated snapshot. They show the exchange's current view, not the view on the post date.",
     "education": "SEBI circular HO/47/17/12(11)2025-MRD-POD3/I/11107/2026 of 8 May 2026 (as reported by Bigul): from "
                  "1 July 2026, price data used for education must be at least 30 days old.",
 }
@@ -145,6 +149,22 @@ def build_label(card: dict, text: str = "") -> dict:
             pump = _line("pump", "Pump pattern", f"Not seen: {detail}", config.REAL_LABEL, "ok")
 
     fair = [sebi_line, disclosure, pressure_line, pay, pump]
+    if claim and m.get("avg_traded_value_20d") is not None:
+        crore = m["avg_traded_value_20d"] / 1e7
+        thin = "thin_trading" in codes
+        fair.append(_line("liquidity", "Liquidity", f"₹{crore:,.2f} crore traded a day (20 sessions before the post)"
+                          + ("; thinly traded" if thin else ""), config.REAL_LABEL, "warning" if thin else "info"))
+    surv = surveillance.check((claim or {}).get("symbol"), (claim or {}).get("exchange") or "NSE") if claim else None
+    if surv is not None:
+        if not surv["checked"]:
+            value, tone = "BSE stock: NSE's surveillance lists do not cover it", "info"
+        elif surv["entries"]:
+            value = "Under NSE surveillance: " + "; ".join(
+                f"{e['measure']} {e['stage']} (as of {e['as_of']})" for e in surv["entries"][:3])
+            tone = "warning"
+        else:
+            value, tone = f"Not on NSE's ASM, GSM or ESM lists (snapshot {surv['as_of']})", "ok"
+        fair.append(_line("surveillance", "Exchange surveillance", value, config.REAL_LABEL, tone))
     if "education_loophole" in codes:
         posted = (card.get("post") or {}).get("posted_on")
         rule = posted and dt.date.fromisoformat(posted) >= EDU_RULE_FROM

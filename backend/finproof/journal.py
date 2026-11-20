@@ -47,7 +47,12 @@ def summarize(entries: list[dict], prices, horizon: int = config.MAIN_HORIZON) -
         except (KeyError, ValueError, TypeError):
             problems.append(f"Entry {i + 1} is missing a field or has a wrong value.")
             continue
-        h = score_tip(Tip(f"j{i}", "journal", "journal", symbol, direction, posted), prices).horizons[horizon]
+        scored_tip = score_tip(Tip(f"j{i}", "journal", "journal", symbol, direction, posted), prices)
+        h = scored_tip.horizons[horizon]
+        h7 = scored_tip.horizons.get(7)
+        claimed7 = None
+        if h7 is not None and h7.status == "scored":
+            claimed7 = h7.excess_return if direction == "up" else -h7.excess_return
         claimed = None
         if h.status == "scored":
             claimed = h.excess_return if direction == "up" else -h.excess_return
@@ -57,6 +62,7 @@ def summarize(entries: list[dict], prices, horizon: int = config.MAIN_HORIZON) -
             "provenance": str(e.get("provenance") or config.REAL_LABEL).upper(),
             "status": h.status, "stock_return": h.stock_return, "nifty_return": h.nifty_return,
             "vs_nifty_in_claimed_direction": None if claimed is None else round(claimed, 4),
+            "vs_nifty_7d": None if claimed7 is None else round(claimed7, 4),
         })
 
     groups = {}

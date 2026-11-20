@@ -907,7 +907,7 @@ async function renderJournal() {
         h("button", { type: "button", class: "btn ghost", onclick: () => log("research") }, "Saved for research")]
         : h("p", { class: "small muted" }, "Scan a tip that names a stock and a direction to log it."))];
   const entries = getJournal();
-  const sum = h("div", {}, h("b", {}, "Skipped High-Warning Tips: 30D Outcome vs. Nifty 50"));
+  const sum = h("div", {}, h("b", {}, "Your sources' record: 7 and 30 days later vs. Nifty 50"));
   parts.push(sum);
   box.replaceChildren(...parts);
   if (!entries.length) { sum.append(h("p", { class: "small muted" }, "No tips logged yet.")); return; }
@@ -918,9 +918,10 @@ async function renderJournal() {
       s.provenance === "MIXED" ? " + REAL" : "", " · prices ", pill(s.prices_provenance)));
     Object.values(s.groups).forEach((g) => sum.append(h("div", { class: "jstat" }, g.text)));
     sum.append(h("div", { class: "table-wrap" }, h("table", {},
-      h("thead", {}, h("tr", {}, h("th", {}, "Posted"), h("th", {}, "Stock"), h("th", {}, "Decision"), h("th", { class: "num" }, "vs Nifty 30D"), h("th", {}, "Data"))),
+      h("thead", {}, h("tr", {}, h("th", {}, "Posted"), h("th", {}, "Stock"), h("th", {}, "Decision"), h("th", { class: "num" }, "vs Nifty 7D"), h("th", { class: "num" }, "vs Nifty 30D"), h("th", {}, "Data"))),
       h("tbody", {}, s.rows.map((r) => h("tr", {}, h("td", {}, r.posted_on), h("td", {}, r.symbol), h("td", {}, r.decision_label),
-        h("td", { class: `num ${signClass(r.vs_nifty_in_claimed_direction)}` }, r.status === "scored" ? pct(r.vs_nifty_in_claimed_direction) : r.status),
+        h("td", { class: `num ${signClass(r.vs_nifty_7d)}` }, r.vs_nifty_7d === null || r.vs_nifty_7d === undefined ? "Not enough data" : pct(r.vs_nifty_7d)),
+        h("td", { class: `num ${signClass(r.vs_nifty_in_claimed_direction)}` }, r.status === "scored" ? pct(r.vs_nifty_in_claimed_direction) : "Not enough data"),
         h("td", {}, pill(r.provenance))))))));
     sum.append(h("p", { class: "small muted" }, "Looking back only: how each stock did over 30 days, in the direction the tip claimed."));
   } catch (err) {
