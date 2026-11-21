@@ -149,7 +149,8 @@ async function runScan(text, { sample = null, posted_on = null, source = null, u
     renderKpis();
     renderLabel();
     renderXray();
-    if (state.claim) await setChart(state.claim.symbol, { card, claim: state.claim });
+    if (state.claim) { if (!(await setChart(state.claim.symbol, { card, claim: state.claim }))) clearChart("No price data could be loaded for this stock."); }
+    else { const pick = ambiguousPicker(card); clearChart(pick ? "This post names a group of companies, not one stock." : NO_STOCK, pick); }
     auditorNote();  // async: fills the auditor tab in the background
     renderDesk();
     if ($("#rp-journal").hidden) selectRtab("desk");  // a new scan opens on the Desk Note unless the journal is open
@@ -191,7 +192,7 @@ function renderMeta() {
     item("Date", `${niceDate(d.posted_on)}${d.posted_time ? `, ${d.posted_time} IST` : ""}${tag(d.date_origin)}`, d.date_how),
     item("Source", `${d.source}${tag(d.source_origin)}`, d.source_how),
     item("Ticker", d.tickers?.length ? state.card.claims.filter((c) => c.symbol && !c.ambiguous)
-      .map((c) => `${c.symbol.replace(/^BSE:/, "")} · ${c.exchange || "NSE"}`).join(", ") : "none found"),
+      .map((c) => `${c.symbol.replace(/^BSE:/, "")} · ${c.exchange || "NSE"}${c.found_in ? ` (found in: ${c.found_in})` : ""}`).join(", ") : "none found"),
     item("Platform", d.platform || "Text"),
     state.card.post?.provenance === "SYNTHETIC" ? pill("SYNTHETIC") : "",
     link && /^https?:\/\//.test(link) ? h("a", { class: "mi-link", href: link, target: "_blank", rel: "noopener noreferrer" }, "Open post ↗") : "",
@@ -215,17 +216,17 @@ function renderKpis() {
   if (state.card?.mode === "history") return renderHistoryKpis();
   const c = state.card, claim = state.claim, s = c.sebi;
   const sebiMap = {
-    registered: ["Registered", "green"], name_match: ["Name match", ""], number_not_found: [s.copy_complete ? "Number not found" : "Not in saved copy", s.copy_complete ? "red" : ""],
-    name_not_found: ["Not in saved copy", ""], not_checked: ["Not checked", ""],
+    registered: [s.name_matches === false ? "Number registered" : "Registered", s.name_matches === false ? "" : "green"],
+    name_match: ["Possible match", ""], number_not_found: ["Number not on list", s.copy_complete ? "red" : ""],
+    name_not_found: ["No SEBI number", ""], not_checked: ["Not checked", ""],
   };
   const [sebiText, sebiColor] = sebiMap[s.status] || ["Unknown", ""];
   const sebiBig = h("div", { class: "big small-big" }, h("span", { class: `pulse ${sebiColor}` }), sebiText);
-  const loaded = (s.coverage_text || "").match(/([\d,]+) of ([\d,]+)/);
-  const sebiSub = s.status === "not_checked" ? "Nothing to check" : loaded ? `${loaded[1]} of ${loaded[2]} loaded` : "SEBI list";
+  const sebiSub = s.list_size ? `${s.list_size.toLocaleString("en-IN")} names · saved ${s.copy_saved_on}` : "SEBI list not loaded";
   const sebiTip = [s.text, s.coverage_text].filter(Boolean).join(" ");
 
   const move = h("div", { class: "big" }, "—");
-  let moveSub = "No NSE stock found", moveTip = "";
+  let moveSub = "No stock found on NSE or BSE", moveTip = "";
   const after = claim?.after_post?.horizons?.["30"];
   if (after?.status === "scored") {
     move.className = `big ${after.excess_return >= 0 ? "pos" : "neg"}`;
@@ -315,8 +316,50 @@ function ensureChart() {
   return true;
 }
 
+// No stock in the post: empty every series and price readout, so a chart from an earlier scan never stays on screen.
+const NO_STOCK = "This post doesn't name a stock we could match on NSE or BSE.";
+function clearChart(message = NO_STOCK, extra = null) {
+  state.data = null;
+  state.index = new Map();
+  state.focus = null;
+  const S = state.series;
+  if (S) {
+    [S.candles, S.nifty, S.volume, S.volAvg, ...Object.values(S.overlays)].forEach((s) => s.setData([]));
+    S.markers.setMarkers([]);
+    S.levelLines.forEach((l) => S.candles.removePriceLine(l));
+    S.levelLines = [];
+    S.momentum.forEach((s) => state.chart.removeSeries(s));
+    S.momentum = [];
+    while (state.chart.panes().length > 2) state.chart.removePane(state.chart.panes().length - 1);
+  }
+  $("#ohlc").replaceChildren(h("span", { class: "muted" }, "No stock found"));
+  $("#ind-readout").replaceChildren();
+  const prov = $(".legend-prov");
+  if (prov) prov.textContent = "No price data";
+  let empty = $("#chart-empty");
+  if (!empty) { empty = h("div", { class: "chart-empty", id: "chart-empty", role: "status" }); $("#chart").append(empty); }
+  empty.replaceChildren(h("p", {}, message), extra || "");
+  empty.hidden = false;
+  $("#tour-chart").classList.add("no-stock");
+}
+
+// A group name ("Tata", "Adani") could mean several companies: list them and let the reader pick. FinProof never guesses.
+function ambiguousPicker(card) {
+  const amb = (card.claims || []).filter((c) => c.ambiguous && c.candidates?.length);
+  if (!amb.length) return null;
+  return h("div", { class: "pick" }, ...amb.slice(0, 2).map((c) => h("div", { class: "pick-row" },
+    h("p", { class: "small" }, `“${c.matched_text}” could mean ${c.candidates.length} listed companies${c.found_in ? ` (found in: ${c.found_in})` : ""}. Pick one to see its prices:`),
+    h("div", { class: "pick-btns" }, ...c.candidates.slice(0, 12).map((sym) =>
+      h("button", { type: "button", class: "btn ghost", onclick: () => pickStock(sym) }, sym))))));
+}
+async function pickStock(symbol) {
+  await setChart(symbol, { card: state.card, claim: { symbol, direction: null }, pinLabel: "Post" });
+}
+
 async function setChart(symbol, { card = null, claim = null, pinDate = null, pinLabel = "Tip" } = {}) {
   if (!ensureChart()) return false;
+  if ($("#chart-empty")) $("#chart-empty").hidden = true;
+  $("#tour-chart").classList.remove("no-stock");
   const when = card ? card.post.posted_on : pinDate;
   let data;
   try { data = await getJSON(`/api/chart/${encodeURIComponent(symbol)}${when ? `?levels_before=${when}` : ""}`); } catch { return false; }

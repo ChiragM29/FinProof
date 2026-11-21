@@ -1,0 +1,14 @@
+{
+  "saved_on": "2026-11-21",
+  "source": "sebi.gov.in Recognised Intermediaries: Research Analysts (intmId 14) and Investment Advisers (intmId 13), every page",
+  "coverage": {
+    "RA": {
+      "saved": 2395,
+      "listed": 2404
+    },
+    "IA": {
+      "saved": 1092,
+      "listed": 1095
+    }
+  }
+}

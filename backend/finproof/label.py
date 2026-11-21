@@ -102,12 +102,12 @@ def build_label(card: dict, text: str = "") -> dict:
 
     # ---- Are they playing fair?
     s = card.get("sebi") or {}
-    snap = f"; snapshot {s['copy_saved_on']}" if s.get("copy_saved_on") else ""
-    sebi_text = {"registered": "Registered", "name_match": "Name matches a registered entry",
-                 "number_not_found": "Number not found in the saved copy", "name_not_found": "Not found in the saved copy",
-                 "not_checked": "No name or registration number in the post"}.get(s.get("status"), "Not checked")
+    snap = "" if not (s.get("copy_saved_on") and s.get("list_size")) else (
+        f" (list saved {s['copy_saved_on']})" if s.get("status") == "name_not_found"
+        else f" (list of {s['list_size']:,} names saved {s['copy_saved_on']})")
+    sebi_text = s.get("short") or "Not checked"
     sebi_line = _line("sebi", "SEBI registration", f"{sebi_text}{snap}", post_prov,
-                      "ok" if s.get("status") == "registered" else "warning")
+                      "ok" if s.get("status") == "registered" and s.get("name_matches") is not False else "warning")
 
     disclosed = sorted({m.group(0).lower() for m in DISCLOSURE_RE.finditer(text or "")})[:3]
     disclosure = _line("disclosure", "Conflict disclosure",

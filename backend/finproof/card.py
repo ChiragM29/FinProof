@@ -181,21 +181,42 @@ def _track_record(ledger: Ledger, source_key: str | None, as_of: dt.date | None 
     return data
 
 
+def _found_in(claim, parts: dict[str, str]) -> str | None:
+    """The first part of a video (title, description, transcript...) that names this stock."""
+    needles = [n.lower() for n in (claim.matched_text, (claim.symbol or "").split(":")[-1]) if n]
+    for part, body in parts.items():
+        low = (body or "").lower()
+        if any(re.search(rf"(?<![a-z0-9]){re.escape(n)}(?![a-z0-9])", low) for n in needles):
+            return part
+    return None
+
+
 def build_card(*, text: str, ledger: Ledger, prices, posted_on: dt.date, posted_on_note: str,
                kind: str = "text", title: str | None = None, channel: str | None = None,
                source_key: str | None = None, link: str = "", max_stocks: int = 5,
-               point_in_time: bool = False, post_provenance: str = config.REAL_LABEL) -> dict:
+               point_in_time: bool = False, post_provenance: str = config.REAL_LABEL,
+               text_parts: dict[str, str] | None = None) -> dict:
     """Build the card. With point_in_time=True the card uses only what was known before
     `posted_on` (no outcome, no fall-after signal, track record as of that day). The
     decision test uses this mode so the card cannot give away how a tip turned out.
     `post_provenance` is SYNTHETIC for made-up demo posts: findings read from the post carry that label."""
     ex = extract.extract(text)
-    sebi_check = sebi.check(ex.sebi_numbers, channel)
+    # Where each SEBI number appears (title, description, transcript, channel page...), for the label.
+    parts = text_parts or {"post": text}
+    found_in = {}
+    for part, body in parts.items():
+        for m in extract.REGNO_RE.finditer(body or ""):
+            found_in.setdefault(m.group(0).upper(), part)
+    where = {"youtube": "the video title, description or transcript"}.get(kind, "the post")
+    if "channel page" in parts:
+        where = "the video, its description or the channel page"
+    sebi_check = sebi.check(sorted(set(ex.sebi_numbers) | set(found_in)), channel, where=where, found_in=found_in)
     warnings: list[dict] = []
 
-    # "Not found" only counts as a warning when our copy of SEBI's list is complete.
+    # A quoted number that is not on SEBI's list is a warning, but only when our copy of the list is complete.
+    # A name that matches nobody is not: channel names rarely match people's legal names.
     if sebi_check.copy_complete:
-        if sebi_check.status in ("number_not_found", "name_not_found"):
+        if sebi_check.status == "number_not_found":
             warnings.append({"code": "not_on_sebi_list", "text": sebi_check.text})
         if ex.claims_sebi_registration and sebi_check.status not in ("registered", "name_match"):
             warnings.append({"code": "unverified_sebi_claim",
@@ -239,6 +260,7 @@ def build_card(*, text: str, ledger: Ledger, prices, posted_on: dt.date, posted_
             "expected_prices": c.expected_prices, "stop_loss": c.stop_loss, "price_at_post": c.price_at_post,
             "ambiguous": c.ambiguous, "candidates": c.candidates, "matched_text": c.matched_text,
             "renamed_from": c.renamed_from, "direction_note": direction_note, "price_scale_note": scale_note,
+            "found_in": _found_in(c, parts) if text_parts else None,
         }
         if c.ambiguous:
             item["note"] = f"\"{c.matched_text}\" could mean several listed companies, so we did not check it."

@@ -104,6 +104,8 @@ def _video_card(vid: str, posted_on: dt.date | None = None, extra_text: str | No
         kind="youtube", title=video.get("title"), channel=video.get("channel"),
         source_key=video.get("channel_id") or video.get("channel"),
         link=f"https://www.youtube.com/watch?v={vid}",
+        text_parts={"title": video.get("title") or "", "description": video.get("description") or "",
+                    "transcript": extra_text or video.get("transcript") or ""},
     )
     card["post"]["transcript"] = "found" if video.get("transcript") else f"not available ({video.get('transcript_error')})"
     card["post"]["from_cache"] = video.get("from_cache", False)

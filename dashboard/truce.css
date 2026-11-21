@@ -280,3 +280,14 @@ body.cc { font-size: 14px; }
 .tip:hover::after, .tip:focus::after { display: block; }
 .kpi:nth-child(even) .tip::after { left: auto; right: 0; }
 @media (max-width: 720px) { .scan-btn { min-height: 42px; } }
+
+/* No stock in the post: the chart is emptied and says so (no chart from an earlier scan stays on screen). */
+.chart-empty { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px; text-align: center;
+  font: 600 15px var(--font-display); color: #cbd5e1; background: rgba(11, 15, 23, 0.72); }
+.chart-empty[hidden] { display: none; }
+#tour-chart.no-stock .legend, #tour-chart.no-stock #ind-readout { visibility: hidden; }
+
+.chart-empty p { margin: 0 0 10px; }
+.chart-empty .pick { display: grid; gap: 12px; max-width: 640px; }
+.chart-empty .pick-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.chart-empty .pick-btns .btn { font: 600 12px var(--font-mono); padding: 6px 10px; }
