@@ -8,7 +8,7 @@ The Finance track rule: say clearly which data is real and which is synthetic. W
 |---|---|---|
 | `nse_equity_list_2026-11-20.csv` | Every NSE-listed company: symbol, name, series | archives.nseindia.com, saved 2026-11-20 |
 | `nse_symbol_changes_2026-11-20.csv` | Old → new NSE symbols (TATAMOTORS → TMPV, ZOMATO → ETERNAL) | archives.nseindia.com, saved 2026-11-20 |
-| `sebi_registry_2026-11-20.csv` + `.json` | Registered research analysts, with how much of SEBI's list is covered | sebi.gov.in list pages. **Only page 1 so far: 25 of 2,404.** |
+| `sebi_registry_2026-11-21.csv` + `.json` | Registered research analysts and investment advisers, with how much of SEBI's list is covered | Every page of sebi.gov.in's Recognised Intermediaries lists, read by `backend/scripts/fetch_sebi_lists.py`: 2,395 of 2,404 analysts and 1,092 of 1,095 advisers. |
 | `tips_real.csv` | Public tips: source, stock, direction, date posted, prices named, link | Collected by hand from YouTube and Telegram. **Empty, to fill.** |
 | `sebi_cases.csv` | Pump-and-dump cases named in SEBI orders, with stocks and dates | SEBI orders. **To add.** |
 

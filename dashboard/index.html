@@ -19,6 +19,8 @@
       <button class="tab" data-view="problem" id="nav-problem">Problem Map</button>
       <button class="tab active" data-view="workspace">Workspace</button>
       <button class="tab" data-view="sources">Sources</button>
+      <button class="tab" data-jump="card-auditor">Claim Auditor</button>
+      <button class="tab" data-jump="card-journal">Noise Journal</button>
       <button class="tab" data-view="study" id="nav-study">Decision Study</button>
       <button class="tab" data-view="failures">Failure Cases</button>
     </nav>
@@ -100,16 +102,20 @@
           <div class="glass xray" id="tour-xray"></div>
         </div>
 
-        <aside class="right glass" id="tour-auditor" aria-label="Signal or Noise label, Veteran's Desk, Claim Auditor and journal">
+        <aside class="right" id="tour-auditor" aria-label="Signal or Noise label">
           <div class="signal-label" id="signal-label" hidden></div>
-          <div class="rtabs">
-            <button class="rtab active" data-rtab="desk">Veteran's Desk</button>
-            <button class="rtab" data-rtab="auditor">Claim Auditor</button>
-            <button class="rtab" data-rtab="journal">Noise Journal</button>
-          </div>
-          <div class="rpanel scroll desk" id="rp-desk"></div>
-          <div class="rpanel" id="rp-auditor" hidden>
-            <div class="aud-top"><span class="dot-live" id="aud-dot"></span><span id="aud-status">—</span></div>
+        </aside>
+      </div>
+
+      <div class="ws-row">
+        <section class="glass ws-card desk-card" id="card-desk" aria-labelledby="desk-title">
+          <header class="ws-head"><span class="ws-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6.5a2.5 2.5 0 0 0 0 5H19"/><path d="M8 7h7M8 11h5"/></svg></span><div><h3 id="desk-title">Veteran's Desk</h3><p>A calm mentor note built from this scan</p></div></header>
+          <div class="rpanel desk" id="rp-desk"></div>
+        </section>
+        <section class="glass ws-card aud-card" id="card-auditor" aria-labelledby="aud-title">
+          <header class="ws-head"><span class="ws-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/></svg></span><div><h3 id="aud-title">Claim Auditor</h3><p>Ask about this tip. It never gives buy or sell calls</p></div>
+            <div class="aud-top"><span class="dot-live" id="aud-dot"></span><span id="aud-status">—</span></div></header>
+          <div class="rpanel" id="rp-auditor">
             <div class="msgs" id="msgs" aria-live="polite"></div>
             <div class="prompts" id="prompts"></div>
             <form class="ask" id="ask-form" autocomplete="off">
@@ -117,9 +123,13 @@
               <button type="submit">Ask</button>
             </form>
           </div>
-          <div class="rpanel scroll" id="rp-journal" hidden></div>
-        </aside>
+        </section>
       </div>
+      <section class="glass ws-card journal-card" id="card-journal" aria-labelledby="journal-title">
+        <header class="ws-head"><span class="ws-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span><div><h3 id="journal-title">Noise Journal</h3><p>Your decisions, and what happened 7 and 30 days later</p></div>
+          <div class="ws-actions" id="journal-actions"></div></header>
+        <div class="rpanel" id="rp-journal"></div>
+      </section>
     </section>
 
     <section id="view-problem" hidden></section>

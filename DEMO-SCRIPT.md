@@ -32,13 +32,13 @@ A counterbalanced decision study: each participant decides on 12 past tips with 
 No. FinProof never says buy, sell or hold, never gives a target and never calls a stock good or safe. It reports facts about the message and the sender: registration, pressure tactics, payment route, the sender's past record, and what prices did. Questions asking for a call get a refusal card, and an automated test fails the build if any advice wording appears anywhere.
 
 **What's real and what's synthetic?**
-Every line carries a tag. REAL: NSE and BSE prices, the NSE company and Nifty 50 lists, the SEBI list snapshot (25 of 2,404 research analysts so far), NSE's surveillance lists, and the Sadhna Broadcast case. SYNTHETIC: the demo channels and their tips (scored on real prices), the sample posts, the practice tip set for the study, and the demo journal.
+Every line carries a tag. REAL: NSE and BSE prices, the NSE company and Nifty 50 lists, SEBI's full analyst and adviser lists (3,487 names, saved 21 Nov 2026), NSE's surveillance lists, and the Sadhna Broadcast case. SYNTHETIC: the demo channels and their tips (scored on real prices), the sample posts, the practice tip set for the study, and the demo journal.
 
 **How do you treat honest-but-wrong sources?**
 As a separate axis. "Were they right before?" is the track record; "Are they playing fair?" is about pressure, payment and pump patterns. A source can be honest but wrong (fair, low hit rate) or right but unfair. Merging them into one trust score would hide exactly the difference the brief describes.
 
 **What fails?**
-See the Failure Cases tab. Known limits: volume alone cannot tell a pump from a large one-off trade (so FinProof says "partly seen"); our SEBI list copy is incomplete, so "not found" is not yet a warning; sarcasm and non-Latin scripts are not read; the practice study set is made up, so it is not evidence.
+See the Failure Cases tab. Known limits: volume alone cannot tell a pump from a large one-off trade (so FinProof says "partly seen"); a channel name rarely matches a legal name, so a name that matches nobody on SEBI's list is shown as a fact, not a warning; sarcasm and non-Latin scripts are not read; the practice study set is made up, so it is not evidence.
 
 **Why is BSE needed?**
 Many pump-and-dump stocks are small companies listed only on BSE. Sadhna Broadcast, the subject of a SEBI order about YouTube promotion, has no NSE listing, so a tool that reads only NSE prices would show nothing. FinProof reads NSE first and falls back to BSE, and shows which exchange every number came from.

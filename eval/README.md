@@ -106,7 +106,7 @@ Known cases from SEBI orders against random stock-days. Report catches and false
 | "BUY **TATAMOTORS**" | Symbol no longer exists after the 2025 demerger | Old symbols are mapped with NSE's symbol-change file (TATAMOTORS → TMPV). Returns across a demerger date may still be off if the adjusted price ignores the spin-off |
 | "**Don't touch** SBIN, target 100" | Negation without a buy/sell word; the named price made it look like a rise call | Any negation in the sentence now stops us from guessing a direction |
 | "Bajaj Finance **target 9000**" | No direction word at all | Direction is worked out from the named price versus the real closing price that day, and the card says so. Wrong if the post quotes an old price |
-| SEBI check | Our saved copy has 25 of 2,404 research analysts | "Not found" is not shown as a warning until the copy is complete |
+| SEBI check | Our first saved copy stopped at SEBI's first page: 25 of 2,404 research analysts | Every page of both lists is now saved (2,395 of 2,404 analysts, 1,092 of 1,095 advisers); the check looks for a registration number first |
 | KOTAKBANK post quoting ₹1,930 (Feb 2025) | Yahoo's price history is split-adjusted (about ₹386 that day), so the post's price levels were off by about 5× | The card compares the post's prices with that day's price; at a 2/3/4/5/10/20× gap it divides them before comparing and says so; at any other big gap it does not compare |
 | "pay 98xxxxxx01@paytm" | "98x" inside a masked phone number was read as a "10x"-style promise | The pattern now needs a whole word ("10x", not "98xxx") |
 | "I am **not** SEBI registered" | Counted as a post *claiming* SEBI registration | Negated mentions no longer count as a claim |

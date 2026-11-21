@@ -929,11 +929,12 @@ function currentTip() {
 
 async function renderJournal() {
   const box = $("#rp-journal");
+  const actions = $("#journal-actions");
   if (!state.user) {
-    box.replaceChildren(h("div", {}, h("h3", { style: "margin:0 0 6px" }, "Noise Journal"),
-      h("p", { class: "small muted" }, "Keep a record of tips you skipped or saved for research, and see how they did against the Nifty 50 afterwards."),
-      h("button", { type: "button", class: "btn", onclick: () => login({ name: "Demo Investor", demo: true }) }, "1-click Demo Investor"), " ",
-      h("button", { type: "button", class: "btn ghost", onclick: () => $("#login-dialog").showModal() }, "Use a name")));
+    actions.replaceChildren(
+      h("button", { type: "button", class: "btn", onclick: () => login({ name: "Demo Investor", demo: true }) }, "1-click Demo Investor"),
+      h("button", { type: "button", class: "btn ghost", onclick: () => $("#login-dialog").showModal() }, "Use a name"));
+    box.replaceChildren(h("p", { class: "small muted" }, "Keep a record of tips you skipped or saved for research, and see how they did against the Nifty 50 afterwards."));
     return;
   }
   const tip = currentTip();
@@ -943,11 +944,10 @@ async function renderJournal() {
     renderJournal();
   };
   const reset = async () => { try { setJournal(await getJSON("/api/journal/demo-seed")); } catch { setJournal([]); } renderJournal(); };
+  actions.replaceChildren(h("span", { class: "small muted" }, "Logged in as ", h("b", {}, state.user.name)),
+    state.user.demo ? h("button", { type: "button", class: "btn ghost", onclick: reset }, "Reset demo") : "",
+    h("button", { type: "button", class: "btn ghost", onclick: logout }, "Log out"));
   const parts = [
-    h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px" },
-      h("span", {}, "Logged in as ", h("b", {}, state.user.name)),
-      h("span", {}, state.user.demo ? h("button", { type: "button", class: "btn ghost", onclick: reset }, "Reset demo") : "", " ",
-        h("button", { type: "button", class: "btn ghost", onclick: logout }, "Log out"))),
     h("div", { class: "glass", style: "padding:10px;margin-bottom:10px" }, h("b", {}, "Log this tip"),
       tip ? [h("p", { class: "small muted", style: "margin:4px 0 8px" }, `${tip.symbol} · ${niceDate(tip.posted_on)} · ${tip.source_label}`),
         h("button", { type: "button", class: "btn", onclick: () => log("skipped") }, "Skipped after X-Ray"), " ",
@@ -976,12 +976,15 @@ async function renderJournal() {
   }
 }
 
+// The Desk, the Auditor and the Journal are separate cards that are always shown; nothing is hidden behind a tab.
 function selectRtab(name) {
-  $$(".rtab").forEach((b) => b.classList.toggle("active", b.dataset.rtab === name));
-  $("#rp-desk").hidden = name !== "desk";
-  $("#rp-auditor").hidden = name !== "auditor";
-  $("#rp-journal").hidden = name !== "journal";
+  ["desk", "auditor", "journal"].forEach((n) => { $(`#rp-${n}`).hidden = false; });
   if (name === "journal") renderJournal();
+}
+// Header links for the Auditor and the Journal open the Workspace and scroll to their card.
+function jumpTo(id) {
+  showView("workspace");
+  requestAnimationFrame(() => $(`#${id}`)?.scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" }));
 }
 
 // ------------------------------------------------------------------ other views
@@ -994,11 +997,11 @@ const FAILURES = [
   ["KOTAKBANK post quoting ₹1,930 (Feb 2025)", "Price history is split-adjusted (about ₹386), so levels were off by 5×", "The post's prices are rescaled before comparing"],
   ["\"pay 98xxxxxx01@paytm\"", "\"98x\" in a masked number was read as a \"10x\"-style promise", "The pattern now needs a whole word"],
   ["ITC, 28 May 2025", "32× its usual volume with no hype at all", "Known limit: volume alone can't tell a pump from a large one-off trade"],
-  ["SEBI check", "Our saved copy has 25 of 2,404 research analysts", "\"Not found\" is not a warning until the copy is complete"],
+  ["SEBI check", "Our first saved copy stopped at SEBI's first page: 25 of 2,404 research analysts", "Every page of both lists is now saved (2,395 of 2,404 analysts, 1,092 of 1,095 advisers), and the check looks for a registration number first"],
 ];
 
 function showView(name) {
-  $$(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
+  $$(".tab[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
   ["problem", "workspace", "sources", "study", "failures"].forEach((v) => { $(`#view-${v}`).hidden = v !== name; });
   if (name === "problem") loadProblem();
   if (name === "sources") loadSources();
@@ -1077,7 +1080,7 @@ function loadFailures() {
       h("ul", { class: "provenance" },
         h("li", {}, pill("REAL"), " NSE daily prices and volumes, cached for offline use"),
         h("li", {}, pill("REAL"), " NSE equity list and symbol-change file"),
-        h("li", {}, pill("REAL"), " SEBI research analyst list (25 of 2,404 saved so far)"),
+        h("li", {}, pill("REAL"), " SEBI research analyst and investment adviser lists (3,487 names, saved 21 Nov 2026)"),
         h("li", {}, pill("SYNTHETIC"), " Sample posts on the workspace"),
         h("li", {}, pill("SYNTHETIC"), " 34 demo tips from three demo channels (outcomes use real prices)"),
         h("li", {}, pill("SYNTHETIC"), " 12 practice posts for the decision study"),
@@ -1158,7 +1161,7 @@ $("#edit-cancel").addEventListener("click", () => { $("#edit-pop").hidden = true
 $("#ask-form").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#ask-input").value; $("#ask-input").value = ""; ask(q); });
 $$("[data-range]").forEach((b) => b.addEventListener("click", () => { $$("[data-range]").forEach((x) => x.classList.toggle("active", x === b)); state.range = Number(b.dataset.range); applyRange(); }));
 $("#nifty-toggle").addEventListener("change", applyRange);
-$$(".tab").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
+$$(".tab").forEach((b) => b.addEventListener("click", () => (b.dataset.jump ? jumpTo(b.dataset.jump) : showView(b.dataset.view))));
 $$(".rtab").forEach((b) => b.addEventListener("click", () => selectRtab(b.dataset.rtab)));
 $("#investor-btn").addEventListener("click", () => (state.user ? selectRtab("journal") : login({ name: "Demo Investor", demo: true })));
 $("#login-cancel").addEventListener("click", () => $("#login-dialog").close());
@@ -1210,6 +1213,7 @@ $("#n50-btn").addEventListener("click", (e) => {
 });
 $("#n50-q").addEventListener("input", (e) => renderN50(e.target.value));
 renderSamples();
+renderJournal();
 
 // Header status: HYBRID · LIVE when the network answers, HYBRID · CACHE when it does not.
 async function refreshStatus() {

@@ -291,3 +291,40 @@ body.cc { font-size: 14px; }
 .chart-empty .pick { display: grid; gap: 12px; max-width: 640px; }
 .chart-empty .pick-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .chart-empty .pick-btns .btn { font: 600 12px var(--font-mono); padding: 6px 10px; }
+
+/* ------------------------------------------------------------------ Workspace layout (final)
+   Row 1: chart (60%) and the full Signal or Noise label (40%). Row 2: Veteran's Desk and Claim Auditor cards.
+   Row 3: Noise Journal, full width. One page scrollbar: no part of the Workspace scrolls inside its own box. */
+#view-workspace .stage { grid-template-columns: minmax(0, 60fr) minmax(0, 40fr); gap: 22px; align-items: start; }
+#tour-auditor.right { position: static; height: auto; min-height: 0; overflow: visible; display: block;
+  background: none; border: 0; box-shadow: none; padding: 0; }
+#tour-auditor .signal-label { max-height: none; overflow: visible; margin: 0; }
+.ws-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; margin-top: 22px; align-items: start; }
+.ws-card { padding: 16px 18px 18px; min-width: 0; }
+.journal-card { margin-top: 22px; }
+.ws-head { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
+.ws-head > div:not(.ws-actions):not(.aud-top) { min-width: 0; }
+.ws-head h3 { margin: 0; font: 700 18px/1.2 var(--font-display); color: var(--ws-accent); letter-spacing: -0.01em; }
+.ws-head p { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+.ws-ico { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: var(--ws-accent);
+  background: color-mix(in srgb, var(--ws-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--ws-accent) 40%, transparent); }
+.desk-card { --ws-accent: #818cf8; }
+.aud-card { --ws-accent: #38bdf8; }
+.journal-card { --ws-accent: #f59e0b; }
+.ws-actions, .ws-head .aud-top { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ws-head .aud-top { padding: 0; border: 0; background: none; }
+/* No nested scroll areas: the panels, the Desk note, the Auditor's messages and the journal table all grow with the page. */
+.ws-card .rpanel, .ws-card .rpanel.scroll { display: block; flex: none; min-height: 0; height: auto; overflow: visible; padding: 0; }
+.ws-card .msgs { display: flex; flex: none; height: auto; max-height: none; overflow: visible; padding: 0 0 10px; }
+.ws-card .msgs:empty { display: none; }
+.aud-card .prompts { padding: 0 0 10px; }
+.aud-card .ask { padding: 0; border: 0; }
+.journal-card .table-wrap { overflow: visible; }
+.journal-card table { width: 100%; }
+.journal-card th, .journal-card td { white-space: nowrap; }
+@media (max-width: 999px) {
+  #view-workspace .stage { grid-template-columns: minmax(0, 1fr); }
+  #view-workspace .stage > .right { order: -1; }
+  .ws-row { grid-template-columns: minmax(0, 1fr); }
+  .journal-card th, .journal-card td { white-space: normal; }
+}

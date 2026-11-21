@@ -259,7 +259,8 @@ def test_static_files_are_revalidated(client):
 
 # The only places the dashboard may say "buy"/"sell": statements of the no-advice policy itself.
 POLICY_LINES = ("never tells you what to buy or sell", "never says what to buy or sell", "asks for a buy, sell or price call",
-                "without ever telling them what to buy or sell")  # the challenge's own words, quoted on the Problem Map
+                "without ever telling them what to buy or sell",  # the challenge's own words, quoted on the Problem Map
+                "It never gives buy or sell calls")  # the Claim Auditor card's one-line description
 STRING_RE = re.compile(r'"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`')
 
 

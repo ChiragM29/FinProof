@@ -98,7 +98,7 @@ Team **VVCE Builders**.
 | Extraction from messages and YouTube (title, description, transcript): stocks, direction, prices named, stop-loss, pressure phrases, SEBI numbers | Done, rule-based |
 | Old NSE symbols mapped to today's (TATAMOTORS → TMPV, ZOMATO → ETERNAL) | Done |
 | Pump-and-dump signs: volume spike, run-up, thin trading, fall after the post, BE/BZ series | Done; thresholds not tuned yet |
-| SEBI lookup from a saved copy of SEBI's lists | Done; copy has only 25 of 2,404 research analysts so far |
+| SEBI lookup from a saved copy of SEBI's lists | Done; every page of both lists saved on 21 Nov 2026 (2,395 of 2,404 analysts, 1,092 of 1,095 advisers) |
 | Card with no buy/sell wording, enforced by tests | Done |
 | Forensic Command Center at `/`: scanner, auto-detected date/source/ticker pills, 4 KPI cards, candlestick chart with tip pin and volume spike, Credibility X-Ray, Veteran's Desk Note, docked Claim Auditor, Noise Journal, 6-step Judge Tour | Done |
 | Veteran's Desk Note: "What is wrong here" / "What is right" in a calm mentor voice, built only from the scan's numbers; **Beginner Mentor View / Raw Forensic Signals** toggle; readable flag names; findings read from a sample post labelled SYNTHETIC | Done |
