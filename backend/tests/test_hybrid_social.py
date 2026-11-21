@@ -168,7 +168,8 @@ def test_instagram_login_wall_gives_a_paste_prompt_not_an_error(client, monkeypa
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "restricted" and body["platform"] == "instagram" and body["platform_label"] == "Instagram"
-    assert body["message"] == social.RESTRICTED_MESSAGE and body["url"] == "https://www.instagram.com/reel/C8xYz12AbCd/"
+    assert body["message"] == "Instagram needs a login to read this post; paste the caption"
+    assert body["url"] == "https://www.instagram.com/reel/C8xYz12AbCd/"
 
 
 def test_timeouts_also_fall_back_quietly(client, monkeypatch):

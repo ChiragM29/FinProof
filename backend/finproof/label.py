@@ -25,6 +25,12 @@ DISCLOSURE_RE = re.compile(r"\b(?:disclosure|conflict of interest|vested interes
 EDU_RULE_FROM = dt.date(2026, 7, 1)
 
 WHY = {
+    "groups": "Read from the video's description on YouTube. Group links move viewers to chats where calls are not public "
+              "and cannot be checked later.",
+    "paid": "Read from the video's description on YouTube: links to paid courses, premium groups or channel memberships. "
+            "SEBI requires a research analyst registration to charge for stock research.",
+    "disclaimer": "Read from the video's description on YouTube. A disclaimer is a fact about the post, not a sign that it "
+                  "is reliable: calling a stock call \"educational\" does not change what it is.",
     "type": "Education teaches a method; an opinion gives a view; a tip names prices to act on; a pressure pitch pushes "
             "you to act or pay; a pump pattern adds unusual trading around the post.",
     "record": "FinProof tip ledger: every past call is scored against the Nifty 50 30 days after posting. A share is "
@@ -149,6 +155,19 @@ def build_label(card: dict, text: str = "") -> dict:
             pump = _line("pump", "Pump pattern", f"Not seen: {detail}", config.REAL_LABEL, "ok")
 
     fair = [sebi_line, disclosure, pressure_line, pay, pump]
+    df = card.get("description_facts")
+    if df and df.get("checked"):  # a YouTube video: facts read from its description (REAL, from YouTube)
+        n = len(df["group_links"])
+        fair.append(_line("groups", "Group links", f"{n} Telegram or WhatsApp group link{'s' if n != 1 else ''} in the description"
+                          if n else "No Telegram or WhatsApp group links in the description", df["provenance"],
+                          "warning" if n else "ok", df["group_links"]))
+        n = len(df["paid_links"])
+        fair.append(_line("paid", "Paid offers", f"{n} paid course, premium or membership link{'s' if n != 1 else ''} in the description"
+                          if n else "No paid course or premium links in the description", df["provenance"],
+                          "warning" if n else "ok", df["paid_links"]))
+        fair.append(_line("disclaimer", "Disclaimer", "The description has a disclaimer" if df["disclaimer"]
+                          else "No disclaimer in the description", df["provenance"], "info" if df["disclaimer"] else "warning",
+                          [df["disclaimer"]] if df["disclaimer"] else []))
     if claim and m.get("avg_traded_value_20d") is not None:
         crore = m["avg_traded_value_20d"] / 1e7
         thin = "thin_trading" in codes

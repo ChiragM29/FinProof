@@ -150,6 +150,7 @@ async function runScan(text, { sample = null, posted_on = null, source = null, u
     renderMeta();
     renderKpis();
     renderLabel();
+    renderWho();
     renderXray();
     if (state.claim) { if (!(await setChart(state.claim.symbol, { card, claim: state.claim }))) clearChart("No price data could be loaded for this stock."); }
     else { const pick = ambiguousPicker(card); clearChart(pick ? "This post names a group of companies, not one stock." : NO_STOCK, pick); }
@@ -698,6 +699,23 @@ function renderDesk() {
 }
 
 // ------------------------------------------------------------------ Signal or Noise label (the verdict, first)
+// Who is this? The YouTube channel behind a video, from its public page (REAL; cached for offline use).
+function renderWho() {
+  const box = $("#who");
+  const p = state.card?.mode === "history" ? null : state.card?.profile;
+  if (!p) { box.hidden = true; return; }
+  const row = (k, v) => (v ? h("div", { class: "who-row" }, h("span", { class: "who-k" }, k), h("span", { class: "who-v" }, v)) : "");
+  const link = p.url ? h("a", { href: p.url, target: "_blank", rel: "noopener noreferrer" }, p.handle || "Open channel ↗") : p.handle;
+  box.replaceChildren(
+    h("div", { class: "who-head" }, h("h3", {}, "Who is this?"), pill("REAL"),
+      h("span", { class: "small muted" }, p.status !== "ok" ? "Channel page not available" : p.from_cache ? `Saved copy from ${p.fetched_on}` : "Live from YouTube")),
+    row("Channel", p.channel), row("Handle", link), row("Subscribers", p.subscribers), row("Videos", p.videos),
+    row("This video", `${niceDate(p.video_date)}${p.video_date_how ? ` (${p.video_date_how})` : ""}`),
+    p.about_lines?.length ? h("div", { class: "from-source" }, h("small", {}, "From the source: channel description"),
+      ...p.about_lines.map((l) => h("p", {}, l))) : "");
+  box.hidden = false;
+}
+
 function renderLabel() {
   const L = state.card?.label;
   const box = $("#signal-label");

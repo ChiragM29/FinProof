@@ -28,7 +28,8 @@ ADVICE_RE = re.compile(
 
 # Fields that hold the post's own words or third-party names, not FinProof's wording.
 QUOTED_KEYS = {"title", "channel", "evidence", "matched_text", "registered_name", "company", "candidates",
-               "link", "source_label", "description_excerpt", "upi_ids", "question"}
+               "link", "source_label", "description_excerpt", "upi_ids", "question",
+               "handle", "about_lines", "group_links", "paid_links", "disclaimer", "url"}
 
 DIRECTION_TEXT = {
     "up": "The post expects the price to rise.",

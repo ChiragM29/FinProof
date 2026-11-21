@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import (ai, auditor, cases, config, history, journal, label, meta, net, reply, signalmap, social, study, veteran,
-               youtube)
+               youtube, profile)
 from .card import DISCLAIMER, build_card, wording_problems
 from .chart import WATCHLIST, chart_payload, quote
 from .ledger import Ledger
@@ -89,6 +89,7 @@ def _video_card(vid: str, posted_on: dt.date | None = None, extra_text: str | No
     except youtube.VideoUnavailable as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     parts = [video.get("title") or "", video.get("description") or "", extra_text or video.get("transcript") or ""]
+    prof = profile.channel_profile(video.get("channel_id"))  # Who is this? (live first, cached copy offline)
     when = youtube.published_ist(video)
     time = None
     if posted_on:
@@ -105,8 +106,16 @@ def _video_card(vid: str, posted_on: dt.date | None = None, extra_text: str | No
         source_key=video.get("channel_id") or video.get("channel"),
         link=f"https://www.youtube.com/watch?v={vid}",
         text_parts={"title": video.get("title") or "", "description": video.get("description") or "",
-                    "transcript": extra_text or video.get("transcript") or ""},
+                    "transcript": extra_text or video.get("transcript") or "", "channel page": (prof or {}).get("about") or ""},
     )
+    card["profile"] = {
+        **({k: prof.get(k) for k in ("channel", "handle", "subscribers", "videos", "url", "fetched_on", "from_cache") if prof.get(k) is not None}
+           if prof else {"channel": video.get("channel")}),
+        "about_lines": profile.about_lines((prof or {}).get("about")),
+        "video_date": day.isoformat(), "video_date_how": note,
+        "status": "ok" if prof else "not available", "provenance": config.REAL_LABEL,
+    }
+    card["description_facts"] = profile.description_facts(video.get("description"))
     card["post"]["transcript"] = "found" if video.get("transcript") else f"not available ({video.get('transcript_error')})"
     card["post"]["from_cache"] = video.get("from_cache", False)
     card["detected"] = _detected(card, day=day, time=time, date_how=note, date_auto=not posted_on,
@@ -186,11 +195,17 @@ def analyze(req: AnalyzeRequest) -> dict:
                         return _text_card(caption, req, kind="youtube", link=url)
                     return _restricted("youtube", url, str(exc.detail),
                                        "YouTube could not be reached — paste the title or what was said to audit it")
+        elif plat == "instagram" and link.get("kind") == "profile" and not caption:
+            return _restricted("instagram", url, "profile link",
+                               f"This is the Instagram profile @{link['handle']}. Paste the caption of the post you want to check")
         elif plat in ("x", "instagram"):
             if caption:
                 return _text_card(caption, req, kind=plat, link=url, handle=link.get("handle"))
             post = social.fetch_post(link)
             if post["status"] != "ok":
+                if plat == "instagram":
+                    who = f" (@{link['handle']})" if link.get("handle") else ""
+                    return _restricted(plat, url, post.get("reason"), f"Instagram needs a login to read this post{who}; paste the caption")
                 return _restricted(plat, url, post.get("reason"))
             posted = None
             if post.get("posted_on"):

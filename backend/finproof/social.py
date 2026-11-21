@@ -29,6 +29,8 @@ RESTRICTED_MESSAGE = "Platform restricted auto-fetch — paste the post caption 
 
 X_RE = re.compile(r"^https?://(?:www\.|mobile\.)?(?:x|twitter)\.com/([A-Za-z0-9_]{1,15})/status(?:es)?/(\d{1,25})", re.I)
 IG_RE = re.compile(r"^https?://(?:www\.)?instagram\.com/(?:([A-Za-z0-9_.]{1,30})/)?(p|reels?|tv)/([A-Za-z0-9_-]{5,40})", re.I)
+IG_PROFILE_RE = re.compile(r"^https?://(?:www\.)?instagram\.com/(?!(?:p|reels?|tv|explore|accounts|stories|direct)/)"
+                           r"([A-Za-z0-9_.]{1,30})/?(?:\?\S*)?$", re.I)
 YT_RE = re.compile(r"^https?://(?:www\.|m\.)?(?:youtube\.com|youtu\.be)/", re.I)
 URL_RE = re.compile(r"^https?://\S+$", re.I)
 PLATFORM_NAMES = {"x": "X (Twitter)", "instagram": "Instagram", "youtube": "YouTube", "web": "Web link"}
@@ -64,7 +66,9 @@ def detect(value: str | None) -> dict | None:
     if m := X_RE.match(v):
         return {"platform": "x", "id": m.group(2), "handle": m.group(1), "url": v}
     if m := IG_RE.match(v):
-        return {"platform": "instagram", "id": m.group(3), "handle": m.group(1), "url": v}
+        return {"platform": "instagram", "id": m.group(3), "handle": m.group(1), "url": v, "kind": "post"}
+    if m := IG_PROFILE_RE.match(v):
+        return {"platform": "instagram", "id": None, "handle": m.group(1), "url": v, "kind": "profile"}
     if YT_RE.match(v):
         return {"platform": "youtube", "id": None, "handle": None, "url": v}
     return {"platform": "web", "id": None, "handle": None, "url": v}

@@ -103,3 +103,15 @@ html[data-theme="light"] body:not(.cc) th { color: #475569; }
 html[data-theme="light"] body:not(.cc) .warn-banner { color: #b45309; background: #fffbeb; }
 html[data-theme="light"] body:not(.cc) code.url { background: #f1f5f9; color: #0f172a; }
 html[data-theme="light"] body:not(.cc) .neg { color: #e11d48; }
+
+/* Who is this? (YouTube channel profile) */
+.who { padding: 14px 16px; margin-bottom: 16px; }
+.who-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.who-head h3 { margin: 0; font: 700 17px var(--font-display); }
+.who-head .small { margin-left: auto; }
+.who-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; padding: 4px 0; font-size: 13.5px; border-top: 1px solid var(--border); }
+.who-k { font-weight: 700; }
+.who-v { overflow-wrap: anywhere; }
+.from-source { margin-top: 10px; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--border); font-size: 13px; }
+.from-source small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+.from-source p { margin: 2px 0; font-style: italic; }
