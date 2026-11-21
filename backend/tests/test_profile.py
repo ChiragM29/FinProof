@@ -72,3 +72,11 @@ def test_journal_logs_a_stock_named_without_a_direction():
     row = out["rows"][0]
     assert row["direction"] == "none" and row["status"] == "scored" and not out.get("problems")
     assert all("in the direction the tip claimed" not in g["text"] for g in out["groups"].values())  # kept out of the averages
+
+
+def test_pasting_an_instagram_caption_runs_the_audit_at_once():
+    from pathlib import Path
+    js = (Path(__file__).resolve().parents[2] / "dashboard" / "cc.js").read_text(encoding="utf-8")
+    box = js[js.index("function showRestricted"):js.index("function renderMeta")]
+    assert "caption.addEventListener(\"paste\", () => setTimeout(go, 0))" in box
+    assert "navigator.clipboard.readText()" in box and "Paste & audit" in box

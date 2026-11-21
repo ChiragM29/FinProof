@@ -123,3 +123,4 @@ html[data-theme="light"] body:not(.cc) .neg { color: #e11d48; }
 /* Instagram's embed of a post that FinProof could not read (copy the caption from it) */
 .ig-embed { display: block; width: 100%; max-width: 400px; height: 560px; margin: 8px 0 10px; border: 1px solid var(--border);
   border-radius: 12px; background: #ffffff; }
+.rs-actions { gap: 8px; }

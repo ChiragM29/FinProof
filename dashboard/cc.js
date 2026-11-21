@@ -178,7 +178,16 @@ function showRestricted(r, sample, plain = false) {
   const embedOk = !plain && navigator.onLine !== false && /^https:\/\/www\.instagram\.com\/(p|reel)\/[A-Za-z0-9_-]{5,20}\/embed\/captioned\/$/.test(r.embed_url || "");
   const embed = embedOk ? h("iframe", { class: "ig-embed", src: r.embed_url, width: "400", height: "560", loading: "lazy",
     referrerpolicy: "no-referrer", title: "The Instagram post" }) : "";
-  if (embedOk) caption.placeholder = "Copy the caption from the post above and paste it here.";
+  if (embedOk) caption.placeholder = "Copy the caption from the post above, then press Paste & audit (or paste here: the audit starts at once).";
+  // No retyping: pasting into the box, or Paste & audit (reads the clipboard), runs the audit straight away.
+  caption.addEventListener("paste", () => setTimeout(go, 0));
+  const pasteAudit = async () => {
+    try {
+      const t = (await navigator.clipboard.readText()).trim();
+      if (t) { caption.value = t; go(); return; }
+    } catch { /* clipboard permission refused: fall back to pasting by hand */ }
+    caption.focus();
+  };
   box.replaceChildren(
     h("div", { class: "rs-head" }, r.platform_label ? h("span", { class: "plat" }, r.platform_label) : "",
       r.url ? h("span", { class: "rs-url", title: r.url }, r.url) : "",
@@ -186,7 +195,9 @@ function showRestricted(r, sample, plain = false) {
     h("p", {}, r.message),
     embed,
     plain ? "" : caption,
-    plain ? "" : h("div", { class: "rs-actions" }, h("button", { type: "button", class: "btn", onclick: go }, "Audit caption")));
+    plain ? "" : h("div", { class: "rs-actions" },
+      navigator.clipboard?.readText ? h("button", { type: "button", class: "btn", onclick: pasteAudit }, "Paste & audit") : "",
+      h("button", { type: "button", class: "btn ghost", onclick: go }, "Audit caption")));
   box.hidden = false;
   if (!plain) caption.focus();
 }

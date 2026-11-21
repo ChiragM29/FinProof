@@ -7,6 +7,7 @@ The copy may be incomplete, so every answer says how much of SEBI's list it cove
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 
@@ -21,6 +22,24 @@ CATEGORY_NAMES = {"RA": "Research Analyst", "IA": "Investment Adviser"}
 COMPLETE_SHARE = 0.98  # a category counts as complete when we hold at least 98% of the names SEBI says it lists
 NAME_CUTOFF = 92        # fuzzy score for "possible match by name" (never "verified")
 SAME_NAME = 85          # fuzzy score for "the registered name matches this channel"
+
+
+# Words that say nothing about who someone is: a shared "Rakesh" or "Market" is not a name match.
+NAME_FILLER = {"the", "and", "of", "ltd", "limited", "pvt", "private", "llp", "co", "company", "bhai", "ji", "sir", "official",
+               "india", "indian", "stock", "stocks", "market", "markets", "share", "shares", "trading", "trader", "calls", "tips"}
+
+
+def _name_tokens(s: str) -> set[str]:
+    return {t for t in re.findall(r"[a-z0-9]+", (s or "").lower()) if len(t) > 1 and t not in NAME_FILLER}
+
+
+def names_match(a: str, b: str, cutoff: int = SAME_NAME) -> bool:
+    """Two names count as the same only when they share at least two distinctive words, or are nearly identical."""
+    if not a or not b:
+        return False
+    if len(_name_tokens(a) & _name_tokens(b)) >= 2 and fuzz.token_set_ratio(a.lower(), b.lower()) >= cutoff:
+        return True
+    return fuzz.ratio(a.lower(), b.lower()) >= 95
 
 
 @dataclass
@@ -93,7 +112,7 @@ def check(reg_numbers: list[str], name: str | None, registry: Registry | None = 
         if not hit.empty:
             row = hit.iloc[0]
             cat = CATEGORY_NAMES.get(row["category"], row["category"])
-            same = None if not name else fuzz.token_set_ratio(name.lower(), row["name"].lower()) >= SAME_NAME
+            same = None if not name else names_match(name, row["name"])
             tail = "" if same is None else ("; the name matches this channel" if same
                                             else f"; the name doesn't match this channel ({name})")
             where_found = f" in the {found_in[num]}" if found_in.get(num) else ""
@@ -110,7 +129,8 @@ def check(reg_numbers: list[str], name: str | None, registry: Registry | None = 
                          reg_no=num, found_in=found_in.get(num), **common)
 
     if name:
-        best = process.extractOne(name, reg.entries["name"].tolist(), scorer=fuzz.token_set_ratio, score_cutoff=NAME_CUTOFF)
+        cands = process.extract(name, reg.entries["name"].tolist(), scorer=fuzz.token_set_ratio, score_cutoff=NAME_CUTOFF, limit=10)
+        best = next((c for c in cands if names_match(name, c[0], NAME_CUTOFF)), None)
         if best:
             row = reg.entries.iloc[best[2]]
             cat = CATEGORY_NAMES.get(row["category"], row["category"])

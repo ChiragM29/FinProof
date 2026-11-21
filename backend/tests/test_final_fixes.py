@@ -124,3 +124,11 @@ def test_plain_posts_have_no_found_in(prices):
     card = build_card(text="BUY SBIN now", ledger=Ledger(prices, tips=[]), prices=prices,
                       posted_on=dt.date(2025, 12, 29), posted_on_note="t")
     assert card["claims"][0]["found_in"] is None and config.REAL_LABEL == "REAL"
+
+
+def test_a_shared_first_name_is_not_a_sebi_match():
+    reg = sebi.Registry(pd.DataFrame([{"name": "Rakesh", "reg_no": "INA100006773", "category": "IA", "validity": ""}]),
+                        saved_on="2026-11-21", coverage={"IA": {"saved": 1, "listed": 1}})
+    assert sebi.check([], "Rakesh Bhai", reg).status == "name_not_found"
+    assert sebi.check(["INA100006773"], "Rakesh Bhai", reg).name_matches is False
+    assert sebi.names_match("Asha Market Research", "Asha Market Research Private Limited")
