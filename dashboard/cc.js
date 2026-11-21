@@ -455,6 +455,8 @@ function showOhlc(time) {
   const prev = d.candles[Math.max(0, i - 1)];
   const chg = (b.close / prev.close - 1) * 100;
   const cls = chg >= 0 ? "pos" : "neg";
+  const prov = $(".legend-prov");
+  if (prov) prov.textContent = `${d.exchange === "BSE" ? "BSE" : d.exchange === "INDEX" ? "NSE index" : "NSE"} · REAL`;
   $("#ohlc").replaceChildren(h("span", { class: "sym" }, d.label), d.exchange && d.exchange !== "INDEX" ? h("span", { class: "exch" }, d.exchange) : "",
     h("span", { class: "muted" }, d.company || ""),
     ...[["O", b.open], ["H", b.high], ["L", b.low], ["C", b.close]].map(([k, v]) => h("span", { class: cls }, h("b", {}, k), fmt(v))),
@@ -760,22 +762,24 @@ function replyCard(reply) {
 
 // ------------------------------------------------------------------ Signal Map (Sources tab): two separate axes
 function signalMap(m) {
-  const W = 360, H = 300, pad = 40;
+  const W = 520, H = 320, pad = 40, top = 12, bottom = H - pad;
   const NS = "http://www.w3.org/2000/svg";
   const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); if (text) e.textContent = text; return e; };
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "smap", role: "img", "aria-label": "Signal Map of sources" });
-  const x = (v) => pad + v * (W - pad - 12), y = (v) => H - pad - v * (H - pad - 12);
-  svg.append(el("rect", { x: pad, y: 12, width: W - pad - 12, height: H - pad - 12, class: "smap-bg" }),
-    el("line", { x1: x(0.5), y1: 12, x2: x(0.5), y2: H - pad, class: "smap-mid" }),
+  // Points sit inside an inner band, so they never cover the quadrant names along the top and bottom edges.
+  const x = (v) => pad + 14 + v * (W - pad - 40), y = (v) => bottom - 22 - v * (bottom - top - 50);
+  const mx = pad + (W - pad - 12) / 2, my = (top + bottom) / 2;
+  svg.append(el("rect", { x: pad, y: top, width: W - pad - 12, height: bottom - top, class: "smap-bg" }),
+    el("line", { x1: x(0.5), y1: top, x2: x(0.5), y2: bottom, class: "smap-mid" }),
     el("line", { x1: pad, y1: y(0.5), x2: W - 12, y2: y(0.5), class: "smap-mid" }),
-    el("text", { x: x(0.75), y: y(0.97), class: "smap-q" }, "Right and fair"), el("text", { x: x(0.25), y: y(0.97), class: "smap-q" }, "Honest but wrong"),
-    el("text", { x: x(0.75), y: y(0.03), class: "smap-q" }, "Right but unfair"), el("text", { x: x(0.25), y: y(0.03), class: "smap-q" }, "Wrong and unfair"),
+    el("text", { x: (mx + W - 12) / 2, y: top + 15, class: "smap-q" }, "Right and fair"), el("text", { x: (pad + mx) / 2, y: top + 15, class: "smap-q" }, "Honest but wrong"),
+    el("text", { x: (mx + W - 12) / 2, y: bottom - 6, class: "smap-q" }, "Right but unfair"), el("text", { x: (pad + mx) / 2, y: bottom - 6, class: "smap-q" }, "Wrong and unfair"),
     el("text", { x: (W + pad) / 2, y: H - 8, class: "smap-ax" }, "Were they right before? →"),
-    el("text", { x: 12, y: H / 2, class: "smap-ax", transform: `rotate(-90 12 ${H / 2})` }, "Are they playing fair? →"));
+    el("text", { x: 12, y: my, class: "smap-ax", transform: `rotate(-90 12 ${my})` }, "Are they playing fair? →"));
   m.plotted.forEach((r) => {
-    const cx = x(r.right), cy = y(r.fair);
+    const cx = x(r.right), cy = y(r.fair), right = r.right > 0.62;
     svg.append(el("circle", { cx, cy, r: 7, class: `smap-dot ${r.provenance === "REAL" ? "real" : "synthetic"}` }),
-      el("text", { x: cx + 10, y: cy + 4, class: "smap-lbl" }, `${r.source_label} (${r.worked}/${r.scored})`));
+      el("text", { x: right ? cx - 11 : cx + 11, y: cy + 4, class: "smap-lbl", "text-anchor": right ? "end" : "start" }, `${r.source_label} (${r.worked}/${r.scored})`));
   });
   return h("div", { class: "glass panel rise signal-map" }, h("h2", {}, "Signal Map"),
     h("p", { class: "small muted" }, m.note), svg,
