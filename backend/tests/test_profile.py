@@ -80,3 +80,32 @@ def test_pasting_an_instagram_caption_runs_the_audit_at_once():
     box = js[js.index("function showRestricted"):js.index("function renderMeta")]
     assert "caption.addEventListener(\"paste\", () => setTimeout(go, 0))" in box
     assert "navigator.clipboard.readText()" in box and "Paste & audit" in box
+
+
+FEED = ("<feed><entry><yt:videoId>AAAAAAAAAAA</yt:videoId><title>SBIN SHARE 💥 big news</title>"
+        "<published>2024-09-02T05:00:00+00:00</published></entry>"
+        "<entry><yt:videoId>BBBBBBBBBBB</yt:videoId><title>Market update today</title>"
+        "<published>2024-09-03T05:00:00+00:00</published></entry></feed>")
+
+
+def test_channel_feed_parsing_and_featured_stocks_are_real_and_point_in_time():
+    from conftest import FakePrices, make_df
+    from finproof import config
+    ups = profile.parse_feed(FEED)
+    assert [u["video_id"] for u in ups] == ["AAAAAAAAAAA", "BBBBBBBBBBB"] and ups[0]["published"] == "2024-09-02"
+    stock = make_df([100.0] * 70 + [110.0] * 330, start="2024-06-03")  # +10% from mid-September 2024
+    prices = FakePrices({config.BENCHMARK: make_df([100.0] * 400, start="2024-06-03"), "SBIN": stock})
+    rec = profile.featured_stocks(ups, prices)
+    assert rec["videos_checked"] == 2 and rec["videos_naming_stocks"] == 1 and rec["provenance"] == "REAL"
+    row = rec["rows"][0]
+    assert row["symbol"] == "SBIN" and row["vs_nifty_since"] == 0.1 and row["vs_nifty_30d"] == 0.1
+    assert "buy" not in rec["note"].lower() and "sell" not in rec["note"].lower()
+
+
+def test_ordinary_words_are_not_stocks_and_hindi_names_are():
+    from finproof import extract
+    syms = lambda t: [c.symbol for c in extract.extract(t).claims]  # noqa: E731
+    assert syms("CM Yogi Adityanath | Last Rites | Panchur") == [] and syms("PM Modi at IIT Kharagpur") == []
+    assert syms("IREDA SHARE | VEDANTA | MAZAGON DOCK") == ["IREDA", "VEDL", "MAZDOCK"]
+    assert syms("रिलायंस और टाटा मोटर्स के शेयर में तेजी") == ["RELIANCE", "TMPV"]
+    assert syms("Titan results today") == ["TITAN"]

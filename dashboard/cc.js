@@ -729,8 +729,24 @@ function renderWho() {
     row("Channel", p.channel), row("Handle", link), row("Subscribers", p.subscribers), row("Videos", p.videos),
     row("This video", `${niceDate(p.video_date)}${p.video_date_how ? ` (${p.video_date_how})` : ""}`),
     p.about_lines?.length ? h("div", { class: "from-source" }, h("small", {}, "From the source: channel description"),
-      ...p.about_lines.map((l) => h("p", {}, l))) : "");
+      ...p.about_lines.map((l) => h("p", {}, l))) : "",
+    featuredTable(state.card.channel_record));
   box.hidden = false;
+}
+
+// Stocks this channel featured: from its latest uploads, how each moved against the Nifty 50 after the video (REAL).
+function featuredTable(cr) {
+  if (!cr?.rows?.length) return "";
+  const cell = (v) => h("td", { class: `num ${signClass(v)}` }, v === null || v === undefined ? "not yet" : pct(v));
+  return h("div", { class: "featured" },
+    h("div", { class: "who-head" }, h("h3", {}, "Stocks this channel featured"), pill(cr.provenance)),
+    h("p", { class: "small muted" }, cr.note),
+    h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Video"), h("th", {}, "Stock"), h("th", { class: "num" }, "Since"),
+      h("th", { class: "num" }, "7D"), h("th", { class: "num" }, "30D"))),
+      h("tbody", {}, cr.rows.slice(0, 8).map((r) => h("tr", { title: r.title },
+        h("td", {}, h("a", { href: `https://www.youtube.com/watch?v=${r.video_id}`, target: "_blank", rel: "noopener noreferrer" }, niceDate(r.published))),
+        h("td", {}, r.symbol), cell(r.vs_nifty_since), cell(r.vs_nifty_7d), cell(r.vs_nifty_30d))))),
+    h("p", { class: "small muted" }, "Points vs the Nifty 50, from the last close before each video. \"not yet\": too soon to tell."));
 }
 
 function renderLabel() {
@@ -763,6 +779,8 @@ function renderLabel() {
     h("div", { class: "nl-head" }, h("h2", {}, L.title), h("span", { class: `nl-type tone-${t.tone}` }, t.value), pill(t.provenance), tBtn,
       state.card.reply ? h("button", { type: "button", class: "btn nl-reply", onclick: () => { reply.hidden = !reply.hidden; } }, "Reply card") : ""),
     tNote, reply,
+    L.summary ? h("div", { class: `nl-flags ${L.summary.flags ? "has" : "none"}` },
+      h("b", {}, String(L.summary.flags)), h("span", {}, ` red flag${L.summary.flags === 1 ? "" : "s"} · ${L.summary.checks - L.summary.flags} of ${L.summary.checks} fairness checks clear`)) : "",
     h("p", { class: "nl-note" }, L.note),
     h("div", { class: "nl-sec" }, L.right_before.title), ...L.right_before.lines.map(row),
     h("div", { class: "nl-sec" }, L.fair.title), ...L.fair.lines.map(row));

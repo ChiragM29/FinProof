@@ -124,3 +124,14 @@ html[data-theme="light"] body:not(.cc) .neg { color: #e11d48; }
 .ig-embed { display: block; width: 100%; max-width: 400px; height: 560px; margin: 8px 0 10px; border: 1px solid var(--border);
   border-radius: 12px; background: #ffffff; }
 .rs-actions { gap: 8px; }
+
+/* The label's headline: how many fairness checks raised a flag */
+.nl-flags { display: flex; align-items: baseline; gap: 8px; margin: 8px 0 2px; padding: 8px 10px; border-radius: 10px; font-size: 14px; }
+.nl-flags b { font: 800 28px/1 var(--font-display); }
+.nl-flags.has { background: rgba(244, 63, 94, 0.12); color: #fda4af; }
+.nl-flags.none { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; }
+html[data-theme="light"] .nl-flags.has { background: #fff1f2; color: #be123c; }
+html[data-theme="light"] .nl-flags.none { background: #ecfdf5; color: #047857; }
+.featured { margin-top: 12px; }
+.featured table { width: 100%; font-size: 13px; }
+.featured td, .featured th { padding: 4px 6px; }

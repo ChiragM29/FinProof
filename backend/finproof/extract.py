@@ -44,8 +44,32 @@ guru dost yaar saar anna akka madi maadi beda beku sakkat chennagide swalpa jast
 NICKNAMES = {
     "reliance": "RELIANCE", "ril": "RELIANCE", "sbi": "SBIN", "l&t": "LT", "larsen": "LT", "airtel": "BHARTIARTL",
     "zomato": "ETERNAL", "hul": "HINDUNILVR", "m&m": "M&M", "infosys": "INFY", "infy": "INFY", "tcs": "TCS",
-    "itc": "ITC", "maruti": "MARUTI",
+    "itc": "ITC", "maruti": "MARUTI", "vedanta": "VEDL",
 }
+# Everyday multi-word names that differ from NSE's full company name.
+ALIASES = {
+    "mazagon dock": "MAZDOCK", "cochin shipyard": "COCHINSHIP", "garden reach": "GRSE", "hindustan aeronautics": "HAL",
+    "bharat electronics": "BEL", "coal india": "COALINDIA", "yes bank": "YESBANK", "tata power": "TATAPOWER",
+    "tata steel": "TATASTEEL", "motherson sumi": "MOTHERSON", "adani ports": "ADANIPORTS", "adani green": "ADANIGREEN",
+    "adani power": "ADANIPOWER", "adani enterprises": "ADANIENT",
+}
+# Stock names as they are written in Hindi video titles and posts (Devanagari). Group names (टाटा, अदानी) are left out.
+HINDI_NAMES = {
+    "रिलायंस": "RELIANCE", "इंफोसिस": "INFY", "इन्फोसिस": "INFY", "टीसीएस": "TCS", "आईटीसी": "ITC", "एसबीआई": "SBIN",
+    "एचडीएफसी बैंक": "HDFCBANK", "आईसीआईसीआई बैंक": "ICICIBANK", "एयरटेल": "BHARTIARTL", "मारुति": "MARUTI",
+    "विप्रो": "WIPRO", "एलआईसी": "LICI", "पेटीएम": "PAYTM", "यस बैंक": "YESBANK", "आईआरएफसी": "IRFC", "बीईएल": "BEL",
+    "एचएएल": "HAL", "ओएनजीसी": "ONGC", "कोल इंडिया": "COALINDIA", "एनटीपीसी": "NTPC", "सुजलॉन": "SUZLON",
+    "वेदांता": "VEDL", "ज़ोमैटो": "ETERNAL", "जोमैटो": "ETERNAL", "टाटा मोटर्स": "TMPV", "टाटा स्टील": "TATASTEEL",
+    "टाटा पावर": "TATAPOWER", "अदानी पोर्ट्स": "ADANIPORTS", "आईआरईडीए": "IREDA", "बजाज फाइनेंस": "BAJFINANCE",
+}
+DEVA = "\u0900-\u097F"
+HINDI_RE = re.compile("(?<![" + DEVA + "])(" + "|".join(sorted(map(re.escape, HINDI_NAMES), key=len, reverse=True)) + ")(?![" + DEVA + "])")
+# A single ordinary-looking word ("Yogi", "Rites", "Modi") is a stock only when the sentence is about stocks.
+STOCK_CONTEXT_RE = re.compile(
+    r"\b(?:shares?|stocks?|ltd|limited|target|tgt|cmp|ltp|sl|stop\s*loss|price|results?|q[1-4]|ipo|buy|sell|hold|nse|bse|"
+    r"portfolio|picks?|invest\w*|breakout|multibagger|rally|crash|bullish|bearish|dividend|earnings|order|orders|strong|weak)\b"
+    r"|₹|%|शेयर|स्टॉक|तेजी|गिरावट|उछाल",
+    re.I)
 NICKNAME_KEYS = {re.sub(r"[^a-z0-9]", "", k.replace("&", "and")): v for k, v in NICKNAMES.items()}
 
 NAME_SUFFIXES = {"limited", "ltd", "pvt", "private", "the", "company", "co", "corporation", "corp", "inc"}
@@ -80,7 +104,11 @@ def _name_index() -> tuple[dict[str, set[str]], dict[str, set[str]], set[str]]:
         fw = simple.split()[0]
         if len(fw) >= 4 and fw not in COMMON_WORDS:
             first.setdefault(fw, set()).add(sym)
-    return keys, first, set(df["SYMBOL"])
+    listed = set(df["SYMBOL"])
+    for alias, alias_sym in ALIASES.items():
+        if alias_sym in listed:
+            keys[alias] = {alias_sym}
+    return keys, first, listed
 
 
 # ---------------------------------------------------------------- patterns
@@ -249,6 +277,13 @@ def find_stocks(text: str) -> list[tuple[int, int, str | None, list[str], str]]:
             found.append((m.start(), m.end(), sym, [sym], m.group(0)))
             taken.append((m.start(), m.end()))
 
+    # 1b. Stock names written in Hindi (Devanagari).
+    for m in HINDI_RE.finditer(text):
+        sym = HINDI_NAMES[m.group(1)]
+        if sym in symbols and free(m.start(), m.end()):
+            found.append((m.start(), m.end(), sym, [sym], m.group(0)))
+            taken.append((m.start(), m.end()))
+
     # 2. Company names, longest match first (up to 5 words).
     words = list(re.finditer(r"[A-Za-z0-9&]+", text))
     lowered = [re.sub(r"[^a-z0-9]", "", w.group(0).lower().replace("&", "and")) for w in words]
@@ -276,7 +311,21 @@ def find_stocks(text: str) -> list[tuple[int, int, str | None, list[str], str]]:
                 # A group name such as "Tata" or "Adani": several companies, so flag it, don't guess.
                 found.append((a, b, None, sorted(first[key])[:8], text[a:b]))
                 taken.append((a, b))
-    return sorted(found)
+    # A one-word name that is not in capitals ("Yogi Adityanath", "Last Rites", "PM Modi") counts only when its sentence
+    # is about stocks or names another stock; otherwise it is an ordinary word, not a stock mention.
+    strong = [(a, b) for a, b, sym, _c, m in found if sym and (" " in m.strip() or m.isupper() or m[:1] in "#$" or
+                                                                 re.sub(r"[^a-z0-9]", "", m.lower()) in NICKNAME_KEYS or
+                                                                 any("\u0900" <= ch <= "\u097f" for ch in m))]
+
+    def keep(span) -> bool:
+        a, b, sym, _cands, m = span
+        if " " in m.strip() or m.isupper() or m[:1] in "#$" or (a, b) in strong:
+            return True
+        seg = _window(text, a, b, words=14)
+        if STOCK_CONTEXT_RE.search(seg) or UP_RE.search(seg) or DOWN_RE.search(seg):
+            return True
+        return any(x != a and abs(x - a) < 120 for x, _y in strong)
+    return sorted(s for s in found if keep(s))
 
 
 SEGMENT_BREAK = re.compile(r"\n|(?<!\d)[.!?](?!\d)")

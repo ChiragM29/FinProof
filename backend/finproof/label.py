@@ -25,6 +25,9 @@ DISCLOSURE_RE = re.compile(r"\b(?:disclosure|conflict of interest|vested interes
 EDU_RULE_FROM = dt.date(2026, 7, 1)
 
 WHY = {
+    "featured": "Read from the channel's latest uploads on YouTube (public feed). Each stock named in a title is compared "
+                "with the Nifty 50 from the last close before the video. Titles rarely say which way a price should go, so this is how "
+                "the featured stocks moved, not a score of right or wrong calls.",
     "groups": "Read from the video's description on YouTube. Group links move viewers to chats where calls are not public "
               "and cannot be checked later.",
     "paid": "Read from the video's description on YouTube: links to paid courses, premium groups or channel memberships. "
@@ -208,9 +211,25 @@ def build_label(card: dict, text: str = "") -> dict:
         pump["why"] = why
         fair = [order, listing, pump]
         kind, tone = "Pump pattern (SEBI case)", "danger"
+    right = [record]
+    cr = card.get("channel_record")
+    if cr and cr.get("videos_checked"):
+        if not cr["videos_naming_stocks"]:
+            v = f"None of its last {cr['videos_checked']} video titles names a listed stock"
+        elif cr.get("avg_vs_nifty_since") is None:
+            v = f"{cr['videos_naming_stocks']} of its last {cr['videos_checked']} videos named a stock; not enough price data yet"
+        else:
+            v = (f"{cr['videos_naming_stocks']} of its last {cr['videos_checked']} videos named a stock; since each video, those "
+                 f"stocks moved {_pct(cr['avg_vs_nifty_since'])} points vs the Nifty 50 on average ({cr['priced']} checked)")
+        right.append(_line("featured", "Stocks it featured", v, cr["provenance"],
+                           "info" if cr.get("avg_vs_nifty_since") is None else ("ok" if cr["avg_vs_nifty_since"] >= 0 else "warning")))
+    fair_lines = fair
+    flags = sum(1 for ln in fair_lines if ln["tone"] in ("warning", "danger"))
     out = {"title": TITLE, "note": NOTE,
+            "summary": {"flags": flags, "checks": len(fair_lines),
+                        "text": f"{flags} of {len(fair_lines)} fairness checks raised a flag"},
             "message_type": _line("type", "Message type", kind, post_prov, tone),
-            "right_before": {"title": "Were they right before?", "lines": [record]},
+            "right_before": {"title": "Were they right before?", "lines": right},
             "fair": {"title": "Are they playing fair?", "lines": fair},
             "media_codes": [c for c in media.MEDIA_CODES if c in codes]}
     from .card import wording_problems  # the label goes through the same no-advice check as the card

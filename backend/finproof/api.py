@@ -116,6 +116,9 @@ def _video_card(vid: str, posted_on: dt.date | None = None, extra_text: str | No
         "status": "ok" if prof else "not available", "provenance": config.REAL_LABEL,
     }
     card["description_facts"] = profile.description_facts(video.get("description"))
+    # Stocks named in the channel's latest uploads, and how they moved against the Nifty 50 afterwards (REAL).
+    card["channel_record"] = profile.featured_stocks(profile.channel_uploads(video.get("channel_id")), PRICES) \
+        if video.get("channel_id") else None
     card["post"]["transcript"] = "found" if video.get("transcript") else f"not available ({video.get('transcript_error')})"
     card["post"]["from_cache"] = video.get("from_cache", False)
     card["detected"] = _detected(card, day=day, time=time, date_how=note, date_auto=not posted_on,

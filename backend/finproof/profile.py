@@ -8,11 +8,13 @@ channel's own words and is shown as quoted source text.
 from __future__ import annotations
 
 import datetime as dt
+import html
 import json
 import logging
 import re
 
 import httpx
+import pandas as pd
 
 from . import config, net
 
@@ -115,3 +117,90 @@ def description_facts(description: str | None) -> dict:
     disc = next((line.strip()[:140] for line in text.splitlines() if DISCLAIMER_RE.search(line)), None)
     return {"group_links": groups[:5], "paid_links": paid[:5], "disclaimer": disc, "checked": bool(text.strip()),
             "provenance": config.REAL_LABEL}
+
+
+# ------------------------------------------------------------------ Stocks this channel featured (REAL)
+FEED_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={}"
+ENTRY_RE = re.compile(r"<entry>(.*?)</entry>", re.S)
+
+
+def parse_feed(xml: str) -> list[dict]:
+    """The channel's latest uploads from its public RSS feed: video id, title, publish date."""
+    out = []
+    for e in ENTRY_RE.findall(xml or ""):
+        vid = re.search(r"<yt:videoId>([\w-]{11})</yt:videoId>", e)
+        title = re.search(r"<title>(.*?)</title>", e, re.S)
+        pub = re.search(r"<published>(\d{4}-\d{2}-\d{2})", e)
+        if vid and title and pub:
+            out.append({"video_id": vid.group(1), "title": html.unescape(title.group(1)).strip(), "published": pub.group(1)})
+    return out
+
+
+def channel_uploads(channel_id: str | None, offline: bool | None = None) -> list[dict]:
+    """Hybrid like channel_profile: the live feed when online (refreshing the cache), else the cached copy."""
+    if not channel_id:
+        return []
+    offline = config.OFFLINE if offline is None else offline
+    path = CH_CACHE / f"{channel_id}_uploads.json"
+    if not offline and net.online():
+        try:
+            r = httpx.get(FEED_URL.format(channel_id), headers=UA, timeout=TIMEOUT)
+            r.raise_for_status()
+            items = parse_feed(r.text)
+            if items:
+                CH_CACHE.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
+                return items
+        except Exception as exc:  # blocked, timed out, no network: fall back to the cache
+            log.warning("channel feed failed for %s: %s", channel_id, exc)
+            if isinstance(exc, httpx.TransportError):
+                net.mark_offline()
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+
+
+def _vs_nifty(sym: str, day: dt.date, prices) -> dict:
+    """How the stock moved against the Nifty 50 from the last close on or before `day`: after 7 and 30 calendar days,
+    and up to the latest close. None where there is not enough data yet (never estimated)."""
+    s, n = prices.history(sym), prices.history(config.BENCHMARK)
+    out = {"since": None, "7d": None, "30d": None, "as_of": None}
+    if s.empty or n.empty:
+        return out
+    s, n = s["Close"].dropna(), n["Close"].dropna()
+    t0 = pd.Timestamp(day)
+    i, j = int(s.index.searchsorted(t0, side="right")) - 1, int(n.index.searchsorted(t0, side="right")) - 1
+    if i < 0 or j < 0:
+        return out
+    rel = lambda a, b: round(float(s.iloc[a] / s.iloc[i] - 1) - float(n.iloc[b] / n.iloc[j] - 1), 4)  # noqa: E731
+    if len(s) - 1 > i and len(n) - 1 > j:
+        out["since"] = rel(len(s) - 1, len(n) - 1)
+        out["as_of"] = s.index[-1].date().isoformat()
+    for key, days in (("7d", 7), ("30d", 30)):
+        target = t0 + pd.Timedelta(days=days)
+        a, b = int(s.index.searchsorted(target)), int(n.index.searchsorted(target))
+        if a < len(s) and b < len(n):
+            out[key] = rel(a, b)
+    return out
+
+
+def featured_stocks(uploads: list[dict], prices, max_stocks: int = 8) -> dict:
+    """Stocks named in the titles of the channel's latest uploads, and how each moved against the Nifty 50 after the
+    video. Titles rarely state a direction, so this is how the featured stocks moved, not whether calls were right."""
+    from . import extract  # local import: extract loads the NSE list
+    rows, seen = [], set()
+    named = 0
+    for u in uploads:
+        syms = [c.symbol for c in extract.extract(u["title"]).claims if c.symbol and not c.ambiguous]
+        named += bool(syms)
+        for sym in syms:
+            if (sym, u["video_id"]) in seen or len({r["symbol"] for r in rows}) >= max_stocks and sym not in {r["symbol"] for r in rows}:
+                continue
+            seen.add((sym, u["video_id"]))
+            mv = _vs_nifty(sym, dt.date.fromisoformat(u["published"]), prices)
+            rows.append({"symbol": sym, "video_id": u["video_id"], "title": u["title"], "published": u["published"],
+                         "vs_nifty_since": mv["since"], "vs_nifty_7d": mv["7d"], "vs_nifty_30d": mv["30d"], "as_of": mv["as_of"]})
+    since = [r["vs_nifty_since"] for r in rows if r["vs_nifty_since"] is not None]
+    return {"videos_checked": len(uploads), "videos_naming_stocks": named, "rows": rows[:12],
+            "avg_vs_nifty_since": round(sum(since) / len(since), 4) if since else None, "priced": len(since),
+            "provenance": config.REAL_LABEL,
+            "note": "From the channel's latest uploads on YouTube. Titles rarely say which way a price should go, so this shows how the "
+                    "featured stocks moved against the Nifty 50 after each video, not whether a call was right."}
