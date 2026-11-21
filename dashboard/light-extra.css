@@ -45,13 +45,18 @@ html[data-theme="light"] .nl-note { color: #475569; }
 html[data-theme="light"] .chart-empty { background: rgba(255, 255, 255, 0.9); color: #334155; }
 html[data-theme="light"] .ohlc .sym { color: #0f172a; }
 
-/* Logo: 30px, weight 900, gradient text; the shield uses the same gradient */
-.brand b { font-size: 30px; font-weight: 900; letter-spacing: -0.02em; line-height: 1;
-  background: linear-gradient(90deg, #38bdf8, #1fd0c4, #00e5a0); -webkit-background-clip: text; background-clip: text; color: transparent; }
-html[data-theme="light"] .brand b { background-image: linear-gradient(90deg, #4f46e5, #0284c7, #059669); }
-html[data-theme="light"] #g .g1 { stop-color: #4f46e5; }
-html[data-theme="light"] #g .g2 { stop-color: #0284c7; }
-html[data-theme="light"] #g .g3 { stop-color: #059669; }
+/* Logo: the FinProof mark (32px, light and dark versions) and a plain lowercase wordmark. No gradient, glow or animation. */
+.brand, body:not(.cc) .brand { display: flex; align-items: center; gap: 10px; }
+.brand .mark { width: 32px; height: 32px; display: block; flex: none; filter: none; }
+.brand .mark-dark { display: none; }
+html[data-theme="dark"] .brand .mark-light { display: none; }
+html[data-theme="dark"] .brand .mark-dark { display: block; }
+.brand b, body:not(.cc) .logo {
+  font-family: "Space Grotesk Variable", "Inter Variable", system-ui, sans-serif; font-size: 24px; font-weight: 700; line-height: 1;
+  letter-spacing: -0.03em; text-transform: lowercase; color: #F8FAFC; -webkit-text-fill-color: currentColor;
+  background: none; -webkit-background-clip: border-box; background-clip: border-box;
+  filter: none; text-shadow: none; animation: none; }
+html[data-theme="light"] .brand b, html[data-theme="light"] body:not(.cc) .logo { color: #0B1437; }
 
 /* Light/Dark switch */
 .theme-btn { min-width: 84px; }
@@ -98,7 +103,6 @@ html[data-theme="light"] body:not(.cc) .post { border-left-color: #0284c7; }
 html[data-theme="light"] body:not(.cc) .choice, html[data-theme="light"] body:not(.cc) .chip { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
 html[data-theme="light"] body:not(.cc) .choice.selected { background: #e0f2fe; border-color: #0284c7; color: #0f172a; box-shadow: none; }
 html[data-theme="light"] body:not(.cc) button.primary { background: #0284c7; color: #ffffff; border-color: #0284c7; box-shadow: none; }
-html[data-theme="light"] body:not(.cc) .logo { background-image: linear-gradient(90deg, #4f46e5, #0284c7, #059669); filter: none; animation: none; }
 html[data-theme="light"] body:not(.cc) th { color: #475569; }
 html[data-theme="light"] body:not(.cc) .warn-banner { color: #b45309; background: #fffbeb; }
 html[data-theme="light"] body:not(.cc) code.url { background: #f1f5f9; color: #0f172a; }
