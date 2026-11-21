@@ -131,7 +131,7 @@ cd backend
 ..\.venv\Scripts\python -m uvicorn finproof.api:app --port 8000
 ```
 
-Open http://localhost:8000: FinProof opens with a sample case already scanned. Paste any WhatsApp/Telegram forward or YouTube link and press **Scan Tip**; click **▶ Judge Tour** for the 7-step walkthrough (Problem Map → a WhatsApp tip and its label → the real SEBI case on BSE → track record and Signal Map → Decision Study → Failure Cases → the refusal). The full talk track is in [DEMO-SCRIPT.md](DEMO-SCRIPT.md). (`/terminal` now redirects to `/`.)
+Open http://localhost:8000: the Workspace opens on six **Try FinProof** cards (a YouTube link, an Instagram link, a WhatsApp forward, the real SEBI case on BSE, Price History, and the refusal), one click each. Paste any WhatsApp/Telegram forward or YouTube link and press **Scan Tip**. The header names every section: Workspace, Sources · Signal Map, Noise Journal, Claim Auditor, Decision Study, Failure Cases. Light theme by default; Dark is one click away. The full talk track is in [DEMO-SCRIPT.md](DEMO-SCRIPT.md). (`/terminal` now redirects to `/`.)
 
 ## Round 2: what each line of the brief maps to
 

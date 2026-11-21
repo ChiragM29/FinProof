@@ -84,3 +84,22 @@ html[data-theme="light"] .smap-lbl { fill: #0f172a; }
 html[data-theme="light"] .smap-dot { stroke: #ffffff; }
 html[data-theme="light"] .smap-dot.real { fill: #047857; } html[data-theme="light"] .smap-dot.synthetic { fill: #d97706; }
 html[data-theme="light"] body.cc, html[data-theme="light"] body.cc * { scrollbar-color: #cbd5e1 transparent; }
+
+/* Study and results pages (glass.css): light theme, the default, following the same stored choice as the dashboard */
+html[data-theme="light"] body:not(.cc) {
+  --bg: #f1f5f9; --surface: #ffffff; --text: #0f172a; --muted: #475569; --border: #e2e8f0; --accent: #0284c7; --accent-text: #ffffff;
+  --good: #047857; --good-bg: #ecfdf5; --warn: #e11d48; --warn-bg: #fff1f2; --info-bg: #f0f9ff; --real: #047857; --synthetic: #92400e;
+  color-scheme: light; background: #f1f5f9; background-image: none; color: #0f172a; }
+html[data-theme="light"] body:not(.cc)::before { display: none; }
+html[data-theme="light"] body:not(.cc) .top { background: rgba(255, 255, 255, 0.92); border-bottom-color: #e2e8f0; }
+html[data-theme="light"] body:not(.cc) .card, html[data-theme="light"] body:not(.cc) .input-card, html[data-theme="light"] body:not(.cc) .post {
+  background: #ffffff; border-color: #e2e8f0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); backdrop-filter: none; }
+html[data-theme="light"] body:not(.cc) .post { border-left-color: #0284c7; }
+html[data-theme="light"] body:not(.cc) .choice, html[data-theme="light"] body:not(.cc) .chip { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+html[data-theme="light"] body:not(.cc) .choice.selected { background: #e0f2fe; border-color: #0284c7; color: #0f172a; box-shadow: none; }
+html[data-theme="light"] body:not(.cc) button.primary { background: #0284c7; color: #ffffff; border-color: #0284c7; box-shadow: none; }
+html[data-theme="light"] body:not(.cc) .logo { background-image: linear-gradient(90deg, #4f46e5, #0284c7, #059669); filter: none; animation: none; }
+html[data-theme="light"] body:not(.cc) th { color: #475569; }
+html[data-theme="light"] body:not(.cc) .warn-banner { color: #b45309; background: #fffbeb; }
+html[data-theme="light"] body:not(.cc) code.url { background: #f1f5f9; color: #0f172a; }
+html[data-theme="light"] body:not(.cc) .neg { color: #e11d48; }

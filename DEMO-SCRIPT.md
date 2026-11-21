@@ -2,7 +2,7 @@
 
 Pitch line: **"We never rate stocks. We rate the message, and we keep score on the messenger."**
 
-Before you start: run the server (`..\.venv\Scripts\python -m uvicorn finproof.api:app --port 8000` from `backend`), open http://localhost:8000 and press **▶ Judge Tour**. Every sample is cached, so the tour runs with Wi-Fi off (start the server with `$env:FINPROOF_OFFLINE = "1"` if the venue Wi-Fi is bad).
+Before you start: run the server (`..\.venv\Scripts\python -m uvicorn finproof.api:app --port 8000` from `backend`), open http://localhost:8000. The Workspace opens on six **Try FinProof** cards, one click per feature. Every sample is cached, so the demo runs with Wi-Fi off (start the server with `$env:FINPROOF_OFFLINE = "1"` if the venue Wi-Fi is bad).
 
 ## 30-second opening
 
@@ -10,9 +10,9 @@ Before you start: run the server (`..\.venv\Scripts\python -m uvicorn finproof.a
 >
 > FinProof never rates the stock. It judges the message and the person who sent it, keeps score on that person over time, and we measure whether people decide better with it.
 
-## The 3-minute walk-through (the Judge Tour, 7 steps)
+## The 3-minute walk-through (7 steps, using the Try FinProof cards and the header)
 
-1. **Problem Map (20 s).** Every line of the brief, the feature that answers it, and where it is on screen. "Each row has a Show button."
+1. **The Workspace (20 s).** Six Try FinProof cards: a YouTube link, an Instagram link, a WhatsApp forward, the SEBI case on BSE, Price History and the refusal. The header names every section, so nothing is hidden behind a tour. The theme switch (Light/Dark) is top right.
 2. **A WhatsApp VIP tip, judged (40 s).** The Signal or Noise label comes first. Two separate questions:
    - *Were they right before?* For this sender: not enough history.
    - *Are they playing fair?* SEBI registration not found (dated snapshot), no conflict disclosure, a paid group, payment to a personal UPI ID instead of a SEBI-validated @valid handle, unusual volume before the post (32.1× its 20-day average), liquidity and NSE surveillance status.
