@@ -173,13 +173,20 @@ def test_scanner_has_no_manual_date_or_source_boxes():
     assert html.count('type="date"') == 1  # only inside the optional Edit popover
 
 
-def test_scan_steps_and_tour_targets_exist():
+def test_scan_steps_exist_and_every_feature_is_reachable_without_a_tour():
     html = page()
     for step in ("Auto-detecting metadata", "SEBI &amp; UPI audit", "NSE OHLCV &amp; volume spike", "Track record check"):
         assert step in html
     js = (DASHBOARD / "cc.js").read_text(encoding="utf-8")
-    targets = re.findall(r'target: "#([\w-]+)"', js)
-    assert len(targets) == 7 and all(f'id="{t}"' in html for t in targets)
+    assert "Judge Tour" not in html + js and 'id="view-problem"' not in html and "loadProblem" not in js
+    # The header names every section; the Auditor and Journal links scroll to their cards.
+    for name in ("Workspace", "Sources · Signal Map", "Noise Journal", "Claim Auditor", "Decision Study", "Failure Cases"):
+        assert f">{name}</button>" in html
+    assert 'data-jump="card-auditor"' in html and 'id="card-auditor"' in html
+    assert 'data-jump="card-journal"' in html and 'id="card-journal"' in html
+    # Try FinProof: six one-click cards (YouTube, Instagram, WhatsApp, SEBI case, Price History, refusal).
+    try_block = js[js.index("const TRY = ["):js.index("function renderTry")]
+    assert try_block.count("() =>") == 6 and 'id="try-grid"' in html
 
 
 def test_pages_load_nothing_from_the_internet():

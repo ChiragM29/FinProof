@@ -1,0 +1,86 @@
+/* Light theme (the default): hand-written part. light.css holds the colour overrides generated from the dark CSS.
+   Dark stays available from the Light/Dark switch in the header. */
+html[data-theme="light"] body.cc {
+  --bg: #f1f5f9; --border: #e2e8f0; --muted: #475569; --accent: #0284c7; --warn: #e11d48; --amber: #b45309;
+  --real: #047857; --synthetic: #92400e; --glass: #ffffff; --text: #0f172a;
+  --ts-aura-1: transparent; --ts-aura-2: transparent; --ts-aura-3: transparent;
+  background: #f1f5f9; background-image: none; color: #0f172a;
+}
+html[data-theme="light"] body.cc::before { display: none; }
+html[data-theme="light"] body.cc::after { display: none; }
+html[data-theme="light"] .muted, html[data-theme="light"] .small.muted, html[data-theme="light"] .ws-head p { color: #475569; }
+html[data-theme="light"] .glass, html[data-theme="light"] .scan-field {
+  background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); backdrop-filter: none; }
+html[data-theme="light"] .cc-head { background: rgba(255, 255, 255, 0.92); border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06); }
+html[data-theme="light"] .cc-foot { color: #475569; border-top-color: #e2e8f0; }
+html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] select {
+  background: #ffffff; color: #0f172a; border-color: #cbd5e1; }
+html[data-theme="light"] input::placeholder, html[data-theme="light"] textarea::placeholder { color: #64748b; }
+
+/* REAL / SYNTHETIC badges */
+html[data-theme="light"] .pill.REAL, html[data-theme="light"] .pill.real { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+html[data-theme="light"] .pill.SYNTHETIC, html[data-theme="light"] .pill.synthetic { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+
+/* Buttons and segmented controls */
+html[data-theme="light"] .btn:not(.ghost), html[data-theme="light"] .scan-btn, html[data-theme="light"] #scan-btn,
+html[data-theme="light"] .ask button { background: #0284c7; color: #ffffff; border-color: #0284c7; box-shadow: none; }
+html[data-theme="light"] .btn.ghost, html[data-theme="light"] .pill-btn, html[data-theme="light"] .sample-btn,
+html[data-theme="light"] #samples-btn, html[data-theme="light"] #n50-btn, html[data-theme="light"] .theme-btn {
+  background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; }
+html[data-theme="light"] .tabs, html[data-theme="light"] .seg, html[data-theme="light"] .rtabs { background: #f1f5f9; border-color: #e2e8f0; }
+html[data-theme="light"] .tab, html[data-theme="light"] .seg button { color: #334155; }
+html[data-theme="light"] .tab.active, html[data-theme="light"] .seg button.active { color: #0369a1; }
+html[data-theme="light"] .has-thumb::before { background: #ffffff; border-color: #bae6fd; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+
+/* Signal or Noise label: black on white, like the label on packaged food */
+html[data-theme="light"] .signal-label { background: #ffffff; border: 2px solid #0f172a; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+html[data-theme="light"] .nl-head { border-bottom-color: #0f172a; }
+html[data-theme="light"] .nl-head h2, html[data-theme="light"] .nl-k, html[data-theme="light"] .nl-sec { color: #0f172a; }
+html[data-theme="light"] .nl-sec { border-top-color: #0f172a; }
+html[data-theme="light"] .nl-row { border-top-color: #e2e8f0; }
+html[data-theme="light"] .nl-v { color: #1e293b; }
+html[data-theme="light"] .nl-note { color: #475569; }
+
+/* Chart surroundings */
+html[data-theme="light"] .chart-empty { background: rgba(255, 255, 255, 0.9); color: #334155; }
+html[data-theme="light"] .ohlc .sym { color: #0f172a; }
+
+/* Logo: 30px, weight 900, gradient text; the shield uses the same gradient */
+.brand b { font-size: 30px; font-weight: 900; letter-spacing: -0.02em; line-height: 1;
+  background: linear-gradient(90deg, #38bdf8, #1fd0c4, #00e5a0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme="light"] .brand b { background-image: linear-gradient(90deg, #4f46e5, #0284c7, #059669); }
+html[data-theme="light"] #g .g1 { stop-color: #4f46e5; }
+html[data-theme="light"] #g .g2 { stop-color: #0284c7; }
+html[data-theme="light"] #g .g3 { stop-color: #059669; }
+
+/* Light/Dark switch */
+.theme-btn { min-width: 84px; }
+
+/* Try FinProof: shown until the first scan */
+.try { margin-top: 18px; }
+.try h2 { margin: 0 0 4px; font: 800 20px var(--font-display); }
+.try-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 12px; }
+.try-card { text-align: left; padding: 16px 18px; cursor: pointer; display: flex; gap: 14px; align-items: flex-start; font: inherit; color: inherit; }
+.try-card:hover { border-color: #38bdf8; }
+.try-card b { display: block; font: 700 16px var(--font-display); margin-bottom: 4px; }
+.try-card span.t { font-size: 13.5px; color: var(--muted); }
+.try-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px;
+  background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.4); }
+#view-workspace.no-scan .stage, #view-workspace.no-scan .ws-row { display: none; }
+@media (max-width: 999px) { .try-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Inset boxes (Auditor answers, Desk chart note, X-Ray "why", journal summary): light grey on white */
+html[data-theme="light"] .m.bot, html[data-theme="light"] .desk-ctx, html[data-theme="light"] .why, html[data-theme="light"] .edit-pop,
+html[data-theme="light"] details.full .card, html[data-theme="light"] .jstat, html[data-theme="light"] .restricted {
+  background: #f8fafc; border-color: #e2e8f0; color: #0f172a; box-shadow: none; }
+html[data-theme="light"] .jstat { border-left-color: #0284c7; }
+
+/* Signal Map (SVG) and scrollbars */
+html[data-theme="light"] .smap-bg { fill: #f8fafc; stroke: #cbd5e1; }
+html[data-theme="light"] .smap-mid { stroke: rgba(100, 116, 139, 0.45); }
+html[data-theme="light"] .smap-q { fill: #64748b; }
+html[data-theme="light"] .smap-ax { fill: #475569; }
+html[data-theme="light"] .smap-lbl { fill: #0f172a; }
+html[data-theme="light"] .smap-dot { stroke: #ffffff; }
+html[data-theme="light"] .smap-dot.real { fill: #047857; } html[data-theme="light"] .smap-dot.synthetic { fill: #d97706; }
+html[data-theme="light"] body.cc, html[data-theme="light"] body.cc * { scrollbar-color: #cbd5e1 transparent; }

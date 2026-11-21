@@ -127,15 +127,17 @@ async function runScan(text, { sample = null, posted_on = null, source = null, u
   try {
     if (!isLink && !url && !text.includes("\n") && text.length <= 40) {
       const hist = await fetch(`/api/price-history?q=${encodeURIComponent(text)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-      if (hist) { done(); await showHistory(hist, text); return; }
+      if (hist) { done(); markScanned(); await showHistory(hist, text); return; }
     }
     const card = await getJSON("/api/analyze", { method: "POST", headers: JSON_HEADERS,
       body: JSON.stringify({ url: isLink ? text : url, text: isLink ? null : text, posted_on, source, sample: !!sample }) });
     done();
     if (card.status === "restricted") {          // the platform would not show the post: ask for the caption
+      $("#try").hidden = true;
       showRestricted(card, sample);
       return;
     }
+    markScanned();
     $("#restricted").hidden = true;
     state.card = card;
     state.text = text;
@@ -285,19 +287,66 @@ const tkey = (t) => (typeof t === "string" ? t : typeof t === "number" ? new Dat
   : t ? `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day).padStart(2, "0")}` : null);
 const fmtVol = (v) => (v >= 1e7 ? `${(v / 1e7).toFixed(2)} Cr` : v >= 1e5 ? `${(v / 1e5).toFixed(2)} L` : fmt(v, 0));
 
+// ------------------------------------------------------------------ Light / Dark theme (light is the default)
+function theme() { return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
+function chartTheme() {
+  const light = theme() === "light";
+  const line = light ? "#e2e8f0" : "#1e293b";
+  return {
+    chart: {
+      layout: { background: { type: "solid", color: light ? "#ffffff" : "rgba(0,0,0,0)" }, textColor: light ? "#475569" : "#94a3b8",
+        panes: { separatorColor: line, separatorHoverColor: "rgba(56,189,248,0.25)" } },
+      grid: { vertLines: { color: light ? "rgba(100,116,139,0.12)" : "rgba(148,163,184,0.08)" }, horzLines: { color: light ? "rgba(100,116,139,0.12)" : "rgba(148,163,184,0.08)" } },
+      rightPriceScale: { borderColor: line },
+      timeScale: { borderColor: line },
+    },
+    candles: light ? { upColor: "#059669", downColor: "#e11d48", wickUpColor: "#059669", wickDownColor: "#e11d48" }
+      : { upColor: "#10b981", downColor: "#f43f5e", wickUpColor: "#10b981", wickDownColor: "#f43f5e" },
+    nifty: light ? "#334155" : "#f8fafc",
+  };
+}
+function setTheme(name, { quiet = false } = {}) {
+  document.documentElement.dataset.theme = name === "dark" ? "dark" : "light";
+  if (!quiet) { try { localStorage.setItem("fp-theme", theme()); } catch { /* private window: the choice lasts for this page only */ } }
+  $("#theme-btn").textContent = theme() === "light" ? "Dark" : "Light";
+  $("#theme-btn").setAttribute("aria-pressed", String(theme() === "dark"));
+  if (state.chart) {
+    const t = chartTheme();
+    state.chart.applyOptions(t.chart);
+    state.series.candles.applyOptions(t.candles);
+    state.series.nifty.applyOptions({ color: t.nifty });
+  }
+  queueThumbs?.();
+}
+
+// ------------------------------------------------------------------ Try FinProof: one click per feature, until the first scan
+function markScanned() { $("#try").hidden = true; $("#view-workspace").classList.remove("no-scan"); }
+function trySample(id) { const s = SAMPLES.find((x) => x.id === id); setScanText(s.text); return runScan(s.text, { sample: s.real ? null : s.id }); }
+function tryText(text) { setScanText(text); return runScan(text); }
+const TRY = [
+  ["▶", "A YouTube video", "Who runs the channel, any SEBI number in the video or description, and which stocks it names.", () => tryText("https://www.youtube.com/watch?v=Z24rem3ma7E")],
+  ["◎", "An Instagram reel", "A demo reel. If Instagram asks for a login, FinProof asks you to paste the caption.", () => trySample("ig-demo")],
+  ["✉", "A WhatsApp forward", "A paid VIP tip with a personal UPI ID, judged line by line.", () => trySample("vip-upi")],
+  ["§", "A real SEBI case on BSE", "Sadhna Broadcast: volume and price around the July 2022 YouTube promotion.", () => trySample("sadhna")],
+  ["↗", "Price History", "Past prices for any Nifty 50 stock, with no tip attached. Here: Reliance.", () => tryText("RELIANCE")],
+  ["⛨", "The refusal", "Ask the Claim Auditor the one question it never answers.", async () => { await trySample("vip-upi"); jumpTo("card-auditor"); if (state.prompts[0]) ask(state.prompts[0]); }],
+];
+function renderTry() {
+  $("#try-grid").replaceChildren(...TRY.map(([icon, title, text, run]) => h("button", { type: "button", class: "glass try-card", onclick: run },
+    h("span", { class: "try-ico", "aria-hidden": "true" }, icon), h("span", {}, h("b", {}, title), h("span", { class: "t" }, text)))));
+}
+
 function ensureChart() {
   if (state.chart || !LWC) return !!state.chart;
   const chart = LWC.createChart($("#chart"), {
     autoSize: true,
-    layout: { background: { type: "solid", color: "rgba(0,0,0,0)" }, textColor: "#94a3b8", fontSize: 11, attributionLogo: true, fontFamily: CHART_FONT,
-      panes: { separatorColor: "#1e293b", separatorHoverColor: "rgba(56,189,248,0.25)" } },
-    grid: { vertLines: { color: "rgba(148,163,184,0.08)" }, horzLines: { color: "rgba(148,163,184,0.08)" } },
-    rightPriceScale: { borderColor: "#1e293b" },
-    timeScale: { borderColor: "#1e293b", rightOffset: 4 },
+    ...chartTheme().chart,
+    layout: { ...chartTheme().chart.layout, fontSize: 11, attributionLogo: true, fontFamily: CHART_FONT },
+    timeScale: { ...chartTheme().chart.timeScale, rightOffset: 4 },
     crosshair: { mode: LWC.CrosshairMode.Normal },
   });
-  const candles = chart.addSeries(LWC.CandlestickSeries, { upColor: "#10b981", downColor: "#f43f5e", borderVisible: false, wickUpColor: "#10b981", wickDownColor: "#f43f5e" });
-  const nifty = chart.addSeries(LWC.LineSeries, { ...LINE, color: "#f8fafc", lineStyle: LWC.LineStyle.Dotted });
+  const candles = chart.addSeries(LWC.CandlestickSeries, { ...chartTheme().candles, borderVisible: false });
+  const nifty = chart.addSeries(LWC.LineSeries, { ...LINE, color: chartTheme().nifty, lineStyle: LWC.LineStyle.Dotted });
   const dashed = { ...LINE, lineStyle: LWC.LineStyle.Dashed };
   const overlays = {
     sma20: chart.addSeries(LWC.LineSeries, { ...LINE, color: "#fbbf24", lineWidth: 2 }),
@@ -685,29 +734,6 @@ function renderLabel() {
   box.hidden = false;
 }
 
-// ------------------------------------------------------------------ Problem Map: each line of the brief -> what answers it
-const BRIEF = [
-  ["“A few finfluencers are registered with SEBI. Most are not.”", "SEBI registration check against a dated copy of SEBI's research analyst and investment adviser lists", "Signal or Noise label › SEBI registration · Key signals › SEBI status", "workspace"],
-  ["“Some tips are honest but wrong.”", "A track-record axis (“Were they right before?”), kept separate from the fairness axis", "Label › Were they right before? · Sources › Signal Map", "sources"],
-  ["“Others are part of pump-and-dump schemes.”", "Pump-pattern check (volume before the post, price after it) and a real SEBI case on BSE", "Label › Pump pattern · Samples › Real case", "workspace"],
-  ["“Nobody tracks most tips over time, so an investor cannot see which sources were right in the past.”", "The tip ledger: every call scored against the Nifty 50 at 7, 30 and 90 days", "Sources tab · Noise Journal", "sources"],
-  ["“Retail investors act on information whose quality they cannot judge”", "The Signal or Noise label and the Veteran's Desk explanations", "Right panel: label, then Veteran's Desk", "workspace"],
-  ["“get much of their information from social media”", "WhatsApp, Telegram, YouTube, X and Instagram input; the Chrome extension; a reply card in 3 languages", "Scanner · Samples · Label › Reply card", "workspace"],
-  ["“measurably improves how a retail investor makes decisions”", "The Decision Study: each person sees half the tips with the label and half without; metrics fixed in advance", "Decision Study tab · /results.html", "study"],
-  ["“without ever telling them what to buy or sell”", "An automated no-advice test over every string; the Claim Auditor's refusal card; past prices only", "Claim Auditor › the red refusal card · Failure Cases", "failures"],
-];
-
-function loadProblem() {
-  $("#view-problem").replaceChildren(h("div", { class: "glass panel rise problem-map", id: "problem-map" },
-    h("h2", {}, "Problem Map"),
-    h("p", { class: "pm-brief" }, "The challenge: “Build a tool that measurably improves how a retail investor makes decisions, without ever telling them what to buy or sell.”"),
-    h("p", { class: "pm-pitch" }, "We never rate stocks. We rate the message, and we keep score on the messenger."),
-    h("div", { class: "table-wrap" }, h("table", {},
-      h("thead", {}, h("tr", {}, h("th", {}, "The brief says"), h("th", {}, "FinProof's answer"), h("th", {}, "Evidence on screen"), h("th", {}, ""))),
-      h("tbody", {}, BRIEF.map(([quote, answer, where, view]) => h("tr", {}, h("td", { class: "pm-quote" }, quote), h("td", {}, answer), h("td", {}, where),
-        h("td", {}, h("button", { type: "button", class: "btn ghost", onclick: () => showView(view) }, "Show")))))))));
-}
-
 // ------------------------------------------------------------------ Price History mode (a bare ticker or company name)
 // Past prices only: no post, so nothing to judge and no flags. ("Research" is a regulated term, so not that word.)
 async function showHistory(card, text) {
@@ -1002,8 +1028,7 @@ const FAILURES = [
 
 function showView(name) {
   $$(".tab[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
-  ["problem", "workspace", "sources", "study", "failures"].forEach((v) => { $(`#view-${v}`).hidden = v !== name; });
-  if (name === "problem") loadProblem();
+  ["workspace", "sources", "study", "failures"].forEach((v) => { $(`#view-${v}`).hidden = v !== name; });
   if (name === "sources") loadSources();
   if (name === "study") loadStudy();
   if (name === "failures") loadFailures();
@@ -1087,60 +1112,6 @@ function loadFailures() {
         h("li", {}, pill("SYNTHETIC"), " 4 Demo Investor journal entries")))));
 }
 
-// ------------------------------------------------------------------ Judge Tour
-const TOUR = [
-  { target: "#view-problem", view: "problem", title: "1. Problem Map", text: "Every line of the brief, the feature that answers it, and where to see it. We never rate stocks: we rate the message and keep score on the messenger." },
-  { target: "#tour-auditor", title: "2. A WhatsApp VIP tip, judged", text: "The Signal or Noise label comes first: were they right before, and are they playing fair? Each line has a REAL or SYNTHETIC tag and a why.",
-    before: () => { selectRtab("desk"); const s = SAMPLES.find((x) => x.id === "vip-upi"); if (state.sample !== s.id) { setScanText(s.text); runScan(s.text, { sample: s.id }).then(tourPlace); } } },
-  { target: "#tour-chart", title: "3. A real SEBI case on BSE", text: "Sadhna Broadcast is listed only on BSE, so an NSE-only tool cannot see it. Real BSE prices: volume up to 12× its average and the price up 149% in the promotion window, then back down.",
-    before: () => { const s = SAMPLES.find((x) => x.id === "sadhna"); if (state.claim?.symbol !== "BSE:CRYSTAL") { setScanText(s.text); runScan(s.text).then(tourPlace); } } },
-  { target: "#view-sources", view: "sources", title: "4. Track record and Signal Map", text: "Every source is scored over time on two separate axes: right before, and playing fair. Too few calls: not enough history." },
-  { target: "#view-study", view: "study", title: "5. Decision Study", text: "Each person sees half the tips with the label and half without. Metrics fixed in advance; results update live on /results.html." },
-  { target: "#view-failures", view: "failures", title: "6. Failure Cases", text: "Where FinProof went wrong on real data, and what we changed." },
-  { target: "#tour-auditor", title: "7. The refusal", text: "Asked the one question it must never answer, the Claim Auditor refuses and shows the facts instead.",
-    before: () => { selectRtab("auditor"); if (state.prompts[0]) ask(state.prompts[0]); } },
-];
-let tourAt = -1;
-
-function tourShow(i) {
-  if (i < 0 || i >= TOUR.length) return tourEnd();
-  tourAt = i;
-  const step = TOUR[i];
-  showView(step.view || "workspace");
-  step.before?.();
-  const el = $(step.target);
-  el.scrollIntoView({ block: "center", behavior: REDUCED ? "auto" : "smooth" });
-  $("#tour").hidden = false;
-  const card = $("#tour-card");
-  card.replaceChildren(h("div", { class: "step-no" }, `STEP ${i + 1} OF ${TOUR.length}`), h("h3", {}, step.title), h("p", {}, step.text),
-    h("div", { class: "tour-nav" },
-      h("button", { type: "button", class: "btn ghost", onclick: tourEnd }, "Skip"),
-      h("span", {}, i > 0 ? h("button", { type: "button", class: "btn ghost", onclick: () => tourShow(i - 1) }, "Back") : "", " ",
-        h("button", { type: "button", class: "btn", onclick: () => tourShow(i + 1) }, i === TOUR.length - 1 ? "Finish" : "Next"))));
-  setTimeout(tourPlace, REDUCED ? 0 : 420);
-  tourPlace();
-}
-
-function tourPlace() {
-  if (tourAt < 0) return;
-  const r = $(TOUR[tourAt].target).getBoundingClientRect();
-  const pad = 6, spot = $("#tour-spot"), card = $("#tour-card");
-  Object.assign(spot.style, { top: `${r.top - pad}px`, left: `${r.left - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
-  const cw = card.offsetWidth, ch = card.offsetHeight, vw = innerWidth, vh = innerHeight;
-  let top = r.bottom + 14;
-  if (top + ch > vh - 10) top = r.top - ch - 14;
-  if (top < 10) top = Math.min(vh - ch - 10, Math.max(10, r.top + 14));
-  let left = Math.min(vw - cw - 12, Math.max(12, r.left + r.width / 2 - cw / 2));
-  if (r.width > vw * 0.6) left = Math.min(vw - cw - 12, Math.max(12, r.left + 24));
-  if (r.height > vh * 0.5 && r.left > cw + 28) {  // tall panel: sit beside it, not on top of it
-    left = r.left - cw - 16;
-    top = Math.min(vh - ch - 10, Math.max(10, r.top + 20));
-  }
-  Object.assign(card.style, { top: `${top}px`, left: `${left}px` });
-}
-
-function tourEnd() { tourAt = -1; $("#tour").hidden = true; }
-
 // ------------------------------------------------------------------ wiring + start
 $("#scan-form").addEventListener("submit", (e) => { e.preventDefault(); runScan($("#scan-input").value); });
 $("#scan-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#scan-form").requestSubmit(); } });
@@ -1163,26 +1134,19 @@ $$("[data-range]").forEach((b) => b.addEventListener("click", () => { $$("[data-
 $("#nifty-toggle").addEventListener("change", applyRange);
 $$(".tab").forEach((b) => b.addEventListener("click", () => (b.dataset.jump ? jumpTo(b.dataset.jump) : showView(b.dataset.view))));
 $$(".rtab").forEach((b) => b.addEventListener("click", () => selectRtab(b.dataset.rtab)));
-$("#investor-btn").addEventListener("click", () => (state.user ? selectRtab("journal") : login({ name: "Demo Investor", demo: true })));
+$("#investor-btn").addEventListener("click", () => { if (state.user) { renderJournal(); jumpTo("card-journal"); } else login({ name: "Demo Investor", demo: true }); });
 $("#login-cancel").addEventListener("click", () => $("#login-dialog").close());
 $("#demo-login").addEventListener("click", () => login({ name: "Demo Investor", demo: true }));
 $("#name-login").addEventListener("click", () => { const n = $("#login-name").value.trim().slice(0, 40); if (n) login({ name: n, demo: false }); });
-$("#tour-btn").addEventListener("click", () => tourShow(0));
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeSamples();
-  if (tourAt < 0) return;
-  if (e.key === "Escape") tourEnd();
-  else if (e.key === "ArrowRight") tourShow(tourAt + 1);
-  else if (e.key === "ArrowLeft" && tourAt > 0) tourShow(tourAt - 1);
-});
-addEventListener("resize", () => { tourPlace(); fitRight(); });
+$("#theme-btn").addEventListener("click", () => setTheme(theme() === "light" ? "dark" : "light"));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSamples(); });
+addEventListener("resize", fitRight);
 
 // Right column: from where it starts down to the bottom of the screen, so the chat input is always visible.
 function fitRight() {
   const top = $("#tour-auditor").getBoundingClientRect().top + scrollY;
   document.documentElement.style.setProperty("--right-h", `${Math.max(480, innerHeight - top - 12)}px`);
 }
-addEventListener("scroll", tourPlace, { passive: true });
 // Samples ▾: the made-up demo posts and links, grouped in one popover instead of a row of buttons.
 function closeSamples() {
   $("#samples-pop").hidden = true; $("#samples-btn").setAttribute("aria-expanded", "false");
@@ -1238,9 +1202,9 @@ setInterval(refreshStatus, 30000);
   fitRight();
   state.user = store.get("finproof-user", null);
   updateInvestor();
-  const first = SAMPLES[1];
-  setScanText(first.text);
-  await runScan(first.text, { sample: first.id });
+  renderJournal();
+  renderTry();
+  setTheme(theme(), { quiet: true });
 })();
 
 // ------------------------------------------------------------------ T.R.U.C.E. look (visual only)

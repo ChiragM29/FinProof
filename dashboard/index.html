@@ -1,37 +1,39 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FinProof</title>
+  <script>try { var t = localStorage.getItem("fp-theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="cc.css">
   <link rel="stylesheet" href="truce.css">
+  <link rel="stylesheet" href="light.css">
+  <link rel="stylesheet" href="light-extra.css">
 </head>
 <body class="cc">
   <header class="cc-head">
     <a class="brand" href="/" aria-label="FinProof home">
-      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#00e5a0"/></linearGradient></defs><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="none" stroke="url(#g)" stroke-width="2.4"/><path d="M10 19l4-5 3 3 5-6" fill="none" stroke="url(#g)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop class="g1" offset="0" stop-color="#38bdf8"/><stop class="g2" offset="0.5" stop-color="#1fd0c4"/><stop class="g3" offset="1" stop-color="#00e5a0"/></linearGradient></defs><path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7z" fill="none" stroke="url(#g)" stroke-width="2.4"/><path d="M10 19l4-5 3 3 5-6" fill="none" stroke="url(#g)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <b>FinProof</b>
     </a>
     <span class="sp" id="st-mode" title="Online first, local cache as fallback">HYBRID</span>
-    <nav class="tabs" aria-label="Views">
-      <button class="tab" data-view="problem" id="nav-problem">Problem Map</button>
+    <nav class="tabs" aria-label="Sections">
       <button class="tab active" data-view="workspace">Workspace</button>
-      <button class="tab" data-view="sources">Sources</button>
-      <button class="tab" data-jump="card-auditor">Claim Auditor</button>
+      <button class="tab" data-view="sources">Sources · Signal Map</button>
       <button class="tab" data-jump="card-journal">Noise Journal</button>
+      <button class="tab" data-jump="card-auditor">Claim Auditor</button>
       <button class="tab" data-view="study" id="nav-study">Decision Study</button>
       <button class="tab" data-view="failures">Failure Cases</button>
     </nav>
     <div class="actions">
-      <button class="btn-tour" id="tour-btn" type="button">▶ Judge Tour</button>
+      <button class="pill-btn theme-btn" id="theme-btn" type="button" aria-label="Switch between light and dark theme">Dark</button>
       <button class="pill-btn" id="investor-btn" type="button">Demo Investor</button>
     </div>
   </header>
 
   <main>
-    <section id="view-workspace">
+    <section id="view-workspace" class="no-scan">
       <div class="scanner" id="tour-scanner">
         <form id="scan-form" class="scan-form" autocomplete="off">
           <label class="scan-field">
@@ -60,6 +62,12 @@
         </div>
         <div class="restricted" id="restricted" hidden></div>
       </div>
+
+      <section class="try" id="try" aria-labelledby="try-title">
+        <h2 id="try-title">Try FinProof</h2>
+        <p class="small muted">Each card runs one feature with one click. Paste your own post or link in the box above at any time.</p>
+        <div class="try-grid" id="try-grid"></div>
+      </section>
 
       <div class="stage">
         <div class="left">
@@ -132,7 +140,6 @@
       </section>
     </section>
 
-    <section id="view-problem" hidden></section>
     <section id="view-sources" hidden></section>
     <section id="view-study" hidden></section>
     <section id="view-failures" hidden></section>
@@ -143,11 +150,6 @@
     <span>Charts: TradingView Lightweight Charts™ 5.3.0 (Apache-2.0), bundled locally; not affiliated with TradingView.</span>
   </footer>
 
-  <div id="tour" hidden>
-    <div class="tour-blocker"></div>
-    <div class="tour-spot" id="tour-spot"></div>
-    <div class="tour-card" id="tour-card" role="dialog" aria-live="polite"></div>
-  </div>
 
   <dialog class="login" id="login-dialog">
     <h2>Demo Investor</h2>
