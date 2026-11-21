@@ -58,6 +58,19 @@ DEMO_POSTS = {
 }
 
 
+SHORTCODE_RE = re.compile(r"^[A-Za-z0-9_-]{5,20}$")
+
+
+def embed_url(url: str | None) -> str | None:
+    """Instagram's official embed for a post or reel link, so the reader can see the post and copy its caption.
+    The page loads it in an iframe; the server never fetches it. None for anything that is not a valid post link."""
+    m = IG_RE.match((url or "").strip())
+    if not m or not SHORTCODE_RE.fullmatch(m.group(3)):
+        return None
+    kind = "reel" if m.group(2).lower().startswith("reel") else "p"
+    return f"https://www.instagram.com/{kind}/{m.group(3)}/embed/captioned/"
+
+
 def detect(value: str | None) -> dict | None:
     """Which platform a pasted link belongs to. None when the value is not a single link."""
     v = (value or "").strip()

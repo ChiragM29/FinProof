@@ -49,3 +49,26 @@ def test_instagram_handle_from_post_reel_and_profile_urls():
     prof = social.detect("https://www.instagram.com/trading.guru/")
     assert prof["handle"] == "trading.guru" and prof["kind"] == "profile"
     assert social.detect("https://www.instagram.com/reel/FPdemoReel01/")["kind"] == "post"
+
+
+def test_instagram_embed_url_from_the_three_link_formats():
+    assert social.embed_url("https://www.instagram.com/p/C8xYz12AbCd/") == "https://www.instagram.com/p/C8xYz12AbCd/embed/captioned/"
+    assert social.embed_url("https://www.instagram.com/reel/C8xYz12AbCd/") == "https://www.instagram.com/reel/C8xYz12AbCd/embed/captioned/"
+    assert social.embed_url("https://www.instagram.com/trading.guru/p/C8xYz12AbCd/") == \
+        "https://www.instagram.com/p/C8xYz12AbCd/embed/captioned/"
+
+
+def test_instagram_embed_rejects_bad_shortcodes_and_other_links():
+    assert social.embed_url("https://www.instagram.com/p/ABCDEFGHIJKLMNOPQRSTUVWXYZ/") is None  # 26 characters: too long
+    assert social.embed_url("https://www.instagram.com/trading.guru/") is None                 # a profile, not a post
+    assert social.embed_url("https://evil.example.com/p/C8xYz12AbCd/") is None
+
+
+def test_journal_logs_a_stock_named_without_a_direction():
+    from conftest import FakePrices, make_df
+    from finproof import config, journal
+    prices = FakePrices({config.BENCHMARK: make_df([100.0] * 400, start="2024-06-03"), "SBIN": make_df([50.0] * 400, start="2024-06-03")})
+    out = journal.summarize([{"symbol": "SBIN", "direction": "none", "posted_on": "2024-09-02", "decision": "skipped"}], prices)
+    row = out["rows"][0]
+    assert row["direction"] == "none" and row["status"] == "scored" and not out.get("problems")
+    assert all("in the direction the tip claimed" not in g["text"] for g in out["groups"].values())  # kept out of the averages

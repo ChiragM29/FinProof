@@ -42,12 +42,13 @@ def summarize(entries: list[dict], prices, horizon: int = config.MAIN_HORIZON) -
             direction = str(e["direction"]).lower()
             posted = dt.date.fromisoformat(str(e["posted_on"]))
             symbol = str(e["symbol"]).upper()
-            if decision not in DECISIONS or direction not in ("up", "down"):
+            # "none": the post named the stock but no direction; it is compared with the Nifty 50 as it is.
+            if decision not in DECISIONS or direction not in ("up", "down", "none"):
                 raise ValueError("decision or direction")
         except (KeyError, ValueError, TypeError):
             problems.append(f"Entry {i + 1} is missing a field or has a wrong value.")
             continue
-        scored_tip = score_tip(Tip(f"j{i}", "journal", "journal", symbol, direction, posted), prices)
+        scored_tip = score_tip(Tip(f"j{i}", "journal", "journal", symbol, "down" if direction == "down" else "up", posted), prices)
         h = scored_tip.horizons[horizon]
         h7 = scored_tip.horizons.get(7)
         claimed7 = None
@@ -67,7 +68,7 @@ def summarize(entries: list[dict], prices, horizon: int = config.MAIN_HORIZON) -
 
     groups = {}
     for decision, label in DECISIONS.items():
-        scored = [r for r in rows if r["decision"] == decision and r["status"] == "scored"]
+        scored = [r for r in rows if r["decision"] == decision and r["status"] == "scored" and r["direction"] != "none"]
         avg = round(sum(r["vs_nifty_in_claimed_direction"] for r in scored) / len(scored), 4) if scored else None
         if not scored:
             text = f"{label}: no tips with a {horizon}-day result yet."

@@ -205,7 +205,10 @@ def analyze(req: AnalyzeRequest) -> dict:
             if post["status"] != "ok":
                 if plat == "instagram":
                     who = f" (@{link['handle']})" if link.get("handle") else ""
-                    return _restricted(plat, url, post.get("reason"), f"Instagram needs a login to read this post{who}; paste the caption")
+                    box = _restricted(plat, url, post.get("reason"), f"Instagram needs a login to read this post{who}; paste the caption")
+                    if not config.OFFLINE and social.embed_url(url):  # offline: nothing extra, the text box stays
+                        box["embed_url"] = social.embed_url(url)
+                    return box
                 return _restricted(plat, url, post.get("reason"))
             posted = None
             if post.get("posted_on"):

@@ -119,3 +119,7 @@ html[data-theme="light"] body:not(.cc) .neg { color: #e11d48; }
 .from-source { margin-top: 10px; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--border); font-size: 13px; }
 .from-source small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
 .from-source p { margin: 2px 0; font-style: italic; }
+
+/* Instagram's embed of a post that FinProof could not read (copy the caption from it) */
+.ig-embed { display: block; width: 100%; max-width: 400px; height: 560px; margin: 8px 0 10px; border: 1px solid var(--border);
+  border-radius: 12px; background: #ffffff; }

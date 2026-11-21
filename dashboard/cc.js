@@ -174,11 +174,17 @@ function showRestricted(r, sample, plain = false) {
   const box = $("#restricted");
   const caption = h("textarea", { class: "rs-caption", rows: "3", placeholder: "Paste the post caption or what was said…", "aria-label": "Post caption" });
   const go = () => { const t = caption.value.trim(); if (t) runScan(t, { url: r.url || null, sample }); };
+  // Instagram's own embed of the post (when online), so the caption can be copied from it. Never fetched by our server.
+  const embedOk = !plain && navigator.onLine !== false && /^https:\/\/www\.instagram\.com\/(p|reel)\/[A-Za-z0-9_-]{5,20}\/embed\/captioned\/$/.test(r.embed_url || "");
+  const embed = embedOk ? h("iframe", { class: "ig-embed", src: r.embed_url, width: "400", height: "560", loading: "lazy",
+    referrerpolicy: "no-referrer", title: "The Instagram post" }) : "";
+  if (embedOk) caption.placeholder = "Copy the caption from the post above and paste it here.";
   box.replaceChildren(
     h("div", { class: "rs-head" }, r.platform_label ? h("span", { class: "plat" }, r.platform_label) : "",
       r.url ? h("span", { class: "rs-url", title: r.url }, r.url) : "",
       h("button", { type: "button", class: "rs-close", "aria-label": "Dismiss", onclick: () => { box.hidden = true; } }, "×")),
     h("p", {}, r.message),
+    embed,
     plain ? "" : caption,
     plain ? "" : h("div", { class: "rs-actions" }, h("button", { type: "button", class: "btn", onclick: go }, "Audit caption")));
   box.hidden = false;
@@ -966,8 +972,8 @@ function updateInvestor() {
 
 function currentTip() {
   const c = state.claim;
-  if (!c || !["up", "down"].includes(c.direction)) return null;
-  return { symbol: c.symbol, direction: c.direction, posted_on: state.card.post.posted_on, source_label: state.card.detected?.source || "Unattributed Forward",
+  if (!c?.symbol || c.ambiguous || !state.card?.post) return null;
+  return { symbol: c.symbol, direction: ["up", "down"].includes(c.direction) ? c.direction : "none", posted_on: state.card.post.posted_on, source_label: state.card.detected?.source || "Unattributed Forward",
     note: state.card.summary.text, provenance: state.sample ? "SYNTHETIC" : "REAL" };
 }
 
@@ -996,7 +1002,7 @@ async function renderJournal() {
       tip ? [h("p", { class: "small muted", style: "margin:4px 0 8px" }, `${tip.symbol} · ${niceDate(tip.posted_on)} · ${tip.source_label}`),
         h("button", { type: "button", class: "btn", onclick: () => log("skipped") }, "Skipped after X-Ray"), " ",
         h("button", { type: "button", class: "btn ghost", onclick: () => log("research") }, "Saved for research")]
-        : h("p", { class: "small muted" }, "Scan a tip that names a stock and a direction to log it."))];
+        : h("p", { class: "small muted" }, "Scan a tip that names a stock to log it."))];
   const entries = getJournal();
   const sum = h("div", {}, h("b", {}, "Your sources' record: 7 and 30 days later vs. Nifty 50"));
   parts.push(sum);
